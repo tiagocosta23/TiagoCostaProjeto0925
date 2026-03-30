@@ -30,7 +30,7 @@ function Prompt-Int {
         $val = Prompt-Value -Mensagem $Mensagem -Sugestao $Sugestao
         $num = 0
         $valido = [int]::TryParse($val, [ref]$num) -and $num -ge $Min -and $num -le $Max
-        if (-not $valido) { Write-Host "  [ERRO] Valor deve ser entre $Min e $Max.`n" -ForegroundColor Red }
+        if (-not $valido) { Write-Host ("  [ERRO] Valor deve ser entre " + $Min + " e " + $Max + ".`n") -ForegroundColor Red }
     } while (-not $valido)
     return $num
 }

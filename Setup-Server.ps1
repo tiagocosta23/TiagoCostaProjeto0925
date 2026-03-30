@@ -28,7 +28,10 @@ function Prompt-IP {
     do {
         $val = Prompt-Value -Mensagem $Mensagem -Sugestao $Sugestao
         $valido = $val -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
-        if (-not $valido) { Write-Host "  [ERRO] Formato invalido. Exemplo: 192.168.1.10`n" -ForegroundColor Red }
+        if (-not $valido) {
+            Write-Host "  [ERRO] Formato invalido. Exemplo: 192.168.1.10" -ForegroundColor Red
+            Write-Host ""
+        }
     } while (-not $valido)
     return $val
 }
@@ -39,7 +42,10 @@ function Prompt-Int {
         $val = Prompt-Value -Mensagem $Mensagem -Sugestao $Sugestao
         $num = 0
         $valido = [int]::TryParse($val, [ref]$num) -and $num -ge $Min -and $num -le $Max
-        if (-not $valido) { Write-Host ("  [ERRO] Valor deve ser entre " + $Min + " e " + $Max + ".`n") -ForegroundColor Red }
+        if (-not $valido) {
+            Write-Host ("  [ERRO] Valor deve ser entre " + $Min + " e " + $Max + ".") -ForegroundColor Red
+            Write-Host ""
+        }
     } while (-not $valido)
     return $num
 }
@@ -49,7 +55,10 @@ function Prompt-SimNao {
     do {
         $val = Prompt-Value -Mensagem $Mensagem -Sugestao $Sugestao
         $valido = $val -match '^[SsNn]$'
-        if (-not $valido) { Write-Host "  [ERRO] Responde com S ou N.`n" -ForegroundColor Red }
+        if (-not $valido) {
+            Write-Host "  [ERRO] Responde com S ou N." -ForegroundColor Red
+            Write-Host ""
+        }
     } while (-not $valido)
     return ($val -match '^[Ss]$')
 }

@@ -28,7 +28,10 @@ function Prompt-SimNao {
     do {
         $val = Prompt-Value -Mensagem $Mensagem -Sugestao $Sugestao
         $valido = $val -match '^[SsNn]$'
-        if (-not $valido) { Write-Host "  [ERRO] Responde com S ou N.`n" -ForegroundColor Red }
+        if (-not $valido) {
+            Write-Host "  [ERRO] Responde com S ou N." -ForegroundColor Red
+            Write-Host ""
+        }
     } while (-not $valido)
     return ($val -match '^[Ss]$')
 }
@@ -46,10 +49,10 @@ function Prompt-Password {
             [Runtime.InteropServices.Marshal]::SecureStringToBSTR($p2))
 
         if ($p1plain -ne $p2plain) {
-            Write-Host "  [ERRO] As passwords nao coincidem. Tenta novamente.`n" -ForegroundColor Red
+            Write-Host "  [ERRO] As passwords nao coincidem. Tenta novamente." -ForegroundColor Red
             $iguais = $false
         } elseif ($p1plain.Length -lt 8) {
-            Write-Host "  [ERRO] A password deve ter pelo menos 8 caracteres.`n" -ForegroundColor Red
+            Write-Host "  [ERRO] A password deve ter pelo menos 8 caracteres." -ForegroundColor Red
             $iguais = $false
         } else {
             $iguais = $true

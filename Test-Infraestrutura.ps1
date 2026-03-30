@@ -28,7 +28,10 @@ function Prompt-IP {
     do {
         $val = Prompt-Value -Mensagem $Mensagem -Sugestao $Sugestao
         $valido = $val -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
-        if (-not $valido) { Write-Host "  [ERRO] Formato invalido. Exemplo: 192.168.1.1`n" -ForegroundColor Red }
+        if (-not $valido) {
+            Write-Host "  [ERRO] Formato invalido. Exemplo: 192.168.1.1" -ForegroundColor Red
+            Write-Host ""
+        }
     } while (-not $valido)
     return $val
 }

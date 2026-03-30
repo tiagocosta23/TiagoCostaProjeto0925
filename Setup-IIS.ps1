@@ -132,6 +132,11 @@ Write-Host ""
 Write-Host "[5/6] A registar PowerShell como CGI handler..." -ForegroundColor Yellow
 $psPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
 
+# Desbloquear a seccao handlers a nivel do servidor (necessario para permitir override)
+Write-Host "       A desbloquear seccao handlers..." -ForegroundColor Gray
+& "$env:SystemRoot\system32\inetsrv\appcmd.exe" unlock config -section:system.webServer/handlers | Out-Null
+
+# Registar o handler PowerShell na aplicacao /api
 Add-WebConfiguration -Filter "system.webServer/handlers" -PSPath "IIS:\Sites\$NomeSite\api" -Value @{
     name            = "PowerShellHandler"
     path            = "*.ps1"

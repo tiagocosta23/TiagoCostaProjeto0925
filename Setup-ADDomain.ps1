@@ -118,9 +118,9 @@ Install-ADDSForest `
     -DatabasePath                  "C:\Windows\NTDS" `
     -LogPath                       "C:\Windows\NTDS" `
     -SysvolPath                    "C:\Windows\SYSVOL" `
-    -InstallDns                    $true `
-    -Force                         $true `
-    -NoRebootOnCompletion          $false
+    -InstallDns `
+    -Force `
+    -NoRebootOnCompletion:$false
 
 # 3. LOG
 Write-Host ""

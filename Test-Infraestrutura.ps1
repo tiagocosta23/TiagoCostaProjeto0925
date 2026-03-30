@@ -1,20 +1,17 @@
-# ==============================================================
 # Test-Infraestrutura.ps1
-# Verifica se toda a infraestrutura está operacional
-# Executar no servidor após tudo configurado
-# ==============================================================
+# Verifica se toda a infraestrutura esta operacional
+# Executar no servidor apos tudo configurado
 
-# Deteta a pasta raiz do repositório automaticamente
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "  TESTE DE INFRAESTRUTURA" -ForegroundColor Cyan
-Write-Host "============================================`n" -ForegroundColor Cyan
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host ""
 Write-Host "  Pasta do projeto: $ProjectRoot" -ForegroundColor Gray
 Write-Host "  Preenche as opcoes abaixo." -ForegroundColor Gray
-Write-Host "  Prime ENTER para aceitar o valor sugerido.`n" -ForegroundColor Gray
-
-# ── FUNÇÕES DE INPUT ────────────────────────────────────────────
+Write-Host "  Prime ENTER para aceitar o valor sugerido." -ForegroundColor Gray
+Write-Host ""
 
 function Prompt-Value {
     param([string]$Mensagem, [string]$Sugestao)
@@ -36,50 +33,49 @@ function Prompt-IP {
     return $val
 }
 
-# ── RECOLHA DE PARÂMETROS ───────────────────────────────────────
-
 Write-Host "-- IPs da Infraestrutura --" -ForegroundColor White
-$IPGateway = Prompt-IP -Mensagem "IP do Gateway (pfSense)" -Sugestao "192.168.1.1"
-$IPCliente = Prompt-IP -Mensagem "IP do Cliente"           -Sugestao "192.168.1.20"
-$Dominio   = Prompt-Value -Mensagem "Nome do dominio (FQDN)" -Sugestao "atec.local"
+$IPGateway = Prompt-IP    -Mensagem "IP do Gateway (pfSense)"  -Sugestao "192.168.1.1"
+$IPCliente = Prompt-IP    -Mensagem "IP do Cliente"            -Sugestao "192.168.1.20"
+$Dominio   = Prompt-Value -Mensagem "Nome do dominio (FQDN)"   -Sugestao "atec.local"
 
 Write-Host ""
 
-# ── FUNÇÕES DE TESTE ─────────────────────────────────────────────
 $erros = 0
 
 function Test-OK   { param($msg) Write-Host "  [OK]   $msg" -ForegroundColor Green }
 function Test-ERR  { param($msg) Write-Host "  [FAIL] $msg" -ForegroundColor Red; $script:erros++ }
 function Test-WARN { param($msg) Write-Host "  [WARN] $msg" -ForegroundColor Yellow }
 
-# ── 1. CONECTIVIDADE DE REDE ─────────────────────────────────────
+# 1. CONECTIVIDADE
 Write-Host "[1] Conectividade de Rede" -ForegroundColor White
 
 if (Test-Connection $IPGateway -Count 1 -Quiet) { Test-OK  "Ping gateway pfSense ($IPGateway)" }
 else                                             { Test-ERR "Ping gateway pfSense ($IPGateway)" }
 
 if (Test-Connection $IPCliente -Count 1 -Quiet) { Test-OK  "Ping cliente ($IPCliente)" }
-else                                             { Test-WARN "Ping cliente ($IPCliente) — pode estar offline" }
+else                                             { Test-WARN "Ping cliente ($IPCliente) - pode estar offline" }
 
 if (Test-Connection "8.8.8.8" -Count 1 -Quiet)  { Test-OK  "Acesso a internet (8.8.8.8)" }
 else                                             { Test-ERR "Sem acesso a internet" }
 
-# ── 2. ACTIVE DIRECTORY E DNS ────────────────────────────────────
-Write-Host "`n[2] Active Directory e DNS" -ForegroundColor White
+# 2. AD E DNS
+Write-Host ""
+Write-Host "[2] Active Directory e DNS" -ForegroundColor White
 
 try {
     $domain = Get-ADDomain -ErrorAction Stop
-    Test-OK "AD DS ativo — Dominio: $($domain.DNSRoot)"
+    Test-OK "AD DS ativo - Dominio: $($domain.DNSRoot)"
 } catch {
-    Test-ERR "AD DS nao acessivel — $($_.Exception.Message)"
+    Test-ERR "AD DS nao acessivel"
 }
 
 $dnsTest = Resolve-DnsName $Dominio -ErrorAction SilentlyContinue
-if ($dnsTest) { Test-OK  "DNS resolve '$Dominio' → $($dnsTest[0].IPAddress)" }
+if ($dnsTest) { Test-OK  "DNS resolve '$Dominio'" }
 else          { Test-ERR "DNS nao resolve '$Dominio'" }
 
-# ── 3. ROLES INSTALADAS ──────────────────────────────────────────
-Write-Host "`n[3] Windows Features / Roles" -ForegroundColor White
+# 3. ROLES
+Write-Host ""
+Write-Host "[3] Windows Features / Roles" -ForegroundColor White
 
 $roles = @{
     "AD-Domain-Services" = "Active Directory Domain Services"
@@ -95,8 +91,9 @@ foreach ($role in $roles.Keys) {
     else              { Test-ERR "$($roles[$role]) NAO instalado ($role)" }
 }
 
-# ── 4. SERVIÇOS CRÍTICOS ─────────────────────────────────────────
-Write-Host "`n[4] Servicos do Sistema" -ForegroundColor White
+# 4. SERVICOS
+Write-Host ""
+Write-Host "[4] Servicos do Sistema" -ForegroundColor White
 
 $servicos = @{
     "ADWS"     = "Active Directory Web Services"
@@ -108,32 +105,34 @@ $servicos = @{
 foreach ($svc in $servicos.Keys) {
     $s = Get-Service -Name $svc -ErrorAction SilentlyContinue
     if ($s -and $s.Status -eq "Running") { Test-OK  "$($servicos[$svc]) a correr" }
-    elseif ($s)                          { Test-ERR "$($servicos[$svc]) parado (Status: $($s.Status))" }
+    elseif ($s)                          { Test-ERR "$($servicos[$svc]) parado" }
     else                                 { Test-WARN "$($servicos[$svc]) nao encontrado" }
 }
 
-# ── 5. DASHBOARD WEB ─────────────────────────────────────────────
-Write-Host "`n[5] Dashboard Web" -ForegroundColor White
+# 5. DASHBOARD
+Write-Host ""
+Write-Host "[5] Dashboard Web" -ForegroundColor White
 
 try {
     $resp = Invoke-WebRequest -Uri "http://localhost" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
     if ($resp.StatusCode -eq 200) { Test-OK "Dashboard acessivel em http://localhost" }
     else                          { Test-ERR "Dashboard retornou HTTP $($resp.StatusCode)" }
 } catch {
-    Test-WARN "Dashboard nao acessivel — IIS pode nao estar configurado ainda"
+    Test-WARN "Dashboard nao acessivel - IIS pode nao estar configurado ainda"
 }
 
-# ── RESULTADO FINAL ──────────────────────────────────────────────
-Write-Host "`n============================================" -ForegroundColor Cyan
+# RESULTADO
+Write-Host ""
+Write-Host "============================================" -ForegroundColor Cyan
 if ($erros -eq 0) {
-    Write-Host "  TUDO OK — Infraestrutura operacional!" -ForegroundColor Green
+    Write-Host "  TUDO OK - Infraestrutura operacional!" -ForegroundColor Green
 } else {
     Write-Host "  $erros ERRO(S) ENCONTRADO(S)" -ForegroundColor Red
     Write-Host "  Resolve os erros antes de avancar." -ForegroundColor Yellow
 }
-Write-Host "============================================`n" -ForegroundColor Cyan
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host ""
 
-# Guardar log
 $logDir = "$ProjectRoot\logs"
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 $logEntry = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Test-Infraestrutura: $erros erros encontrados"

@@ -1,17 +1,14 @@
-# ==============================================================
 # Setup-Projeto.ps1
 # Cria a estrutura de pastas do projeto no Windows Server
-# Executar como Administrador uma vez, no início do projeto
+# Executar como Administrador uma vez, no inicio do projeto
 #
-# NOTA: A pasta base é detetada automaticamente a partir da
-# localização deste script (raiz do repositório clonado).
-# Ex: git clone <url> C:\SistemaAdmin  → base = C:\SistemaAdmin
-#     git clone <url> C:\TiagoCostaProjeto0925 → base = C:\TiagoCostaProjeto0925
-# ==============================================================
+# NOTA: A pasta base e detetada automaticamente a partir da
+# localizacao deste script (raiz do repositorio clonado).
+# Ex: git clone <url> C:\TiagoCostaProjeto0925
 
-# Deteta a pasta raiz do repositório (onde este script está)
 $base = Split-Path -Parent $MyInvocation.MyCommand.Path
 Write-Host "Pasta base do projeto: $base" -ForegroundColor Cyan
+Write-Host ""
 
 $pastas = @(
     "$base\scripts\monitoring",
@@ -36,4 +33,5 @@ foreach ($pasta in $pastas) {
     }
 }
 
-Write-Host "`n[DONE] Estrutura do projeto criada em $base" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "[DONE] Estrutura do projeto criada em $base" -ForegroundColor Cyan

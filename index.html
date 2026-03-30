@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SysAdmin Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0c10;
+    --bg2:       #0f1218;
+    --bg3:       #141820;
+    --border:    #1e2530;
+    --accent:    #00d4ff;
+    --accent2:   #00ff9d;
+    --warn:      #ffb800;
+    --danger:    #ff3d5a;
+    --text:      #c8d0dc;
+    --text-dim:  #5a6478;
+    --mono:      'Share Tech Mono', monospace;
+    --sans:      'Barlow', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanlines overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.07) 2px,
+      rgba(0,0,0,0.07) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    height: 56px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+
+  .logo-icon {
+    width: 28px; height: 28px;
+    border: 2px solid var(--accent);
+    border-radius: 4px;
+    display: grid;
+    place-items: center;
+    position: relative;
+  }
+  .logo-icon::before {
+    content: '';
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:.5; transform:scale(.7); }
+  }
+
+  .logo-text {
+    font-family: var(--mono);
+    font-size: .9rem;
+    color: var(--accent);
+    letter-spacing: .15em;
+    text-transform: uppercase;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  #clock {
+    font-family: var(--mono);
+    font-size: .85rem;
+    color: var(--text-dim);
+    letter-spacing: .1em;
+  }
+
+  #hostname-badge {
+    font-family: var(--mono);
+    font-size: .75rem;
+    background: rgba(0,212,255,.08);
+    border: 1px solid rgba(0,212,255,.25);
+    color: var(--accent);
+    padding: .25rem .75rem;
+    border-radius: 3px;
+    letter-spacing: .1em;
+  }
+
+  #status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent2);
+    box-shadow: 0 0 6px var(--accent2);
+    animation: pulse 2s infinite;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    gap: 0;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    overflow-x: auto;
+  }
+
+  nav button {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: .75rem 1.25rem;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  nav button:hover  { color: var(--text); }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── MAIN ── */
+  main {
+    padding: 1.5rem 2rem;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── GRID ── */
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 1.5rem; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: rgba(0,212,255,.3); }
+  .card::before {
+    content:'';
+    position:absolute;
+    top:0; left:0; right:0;
+    height:2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: .4;
+  }
+
+  .card-label {
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: .5rem;
+  }
+
+  .card-value {
+    font-family: var(--mono);
+    font-size: 2rem;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: .25rem;
+  }
+  .card-value.warn   { color: var(--warn); }
+  .card-value.danger { color: var(--danger); }
+  .card-value.ok     { color: var(--accent2); }
+
+  .card-sub {
+    font-size: .75rem;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+
+  /* ── GAUGE BAR ── */
+  .gauge-wrap { margin-top: .75rem; }
+  .gauge-bg {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .gauge-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width .8s ease;
+    background: var(--accent2);
+  }
+  .gauge-fill.warn   { background: var(--warn); }
+  .gauge-fill.danger { background: var(--danger); }
+
+  /* ── PANEL (card with title) ── */
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .75rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+  }
+
+  .panel-title {
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .panel-badge {
+    font-family: var(--mono);
+    font-size: .7rem;
+    padding: .15rem .5rem;
+    border-radius: 3px;
+    background: rgba(0,212,255,.1);
+    border: 1px solid rgba(0,212,255,.2);
+    color: var(--accent);
+  }
+
+  /* ── TABLE ── */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    text-align: left;
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: .5rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td {
+    padding: .6rem 1rem;
+    font-size: .8rem;
+    font-family: var(--mono);
+    border-bottom: 1px solid rgba(30,37,48,.6);
+    color: var(--text);
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,.02); }
+
+  .tag {
+    font-size: .65rem;
+    padding: .1rem .5rem;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+  .tag-ok      { background: rgba(0,255,157,.1); color: var(--accent2); border: 1px solid rgba(0,255,157,.2); }
+  .tag-warn    { background: rgba(255,184,0,.1);  color: var(--warn);    border: 1px solid rgba(255,184,0,.2); }
+  .tag-danger  { background: rgba(255,61,90,.1);  color: var(--danger);  border: 1px solid rgba(255,61,90,.2); }
+  .tag-dim     { background: rgba(90,100,120,.1); color: var(--text-dim);border: 1px solid rgba(90,100,120,.2); }
+
+  /* ── ALERT BOX ── */
+  #alert-container { margin-bottom: 1.5rem; }
+
+  .alert-item {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .6rem 1rem;
+    border-radius: 4px;
+    margin-bottom: .5rem;
+    font-size: .8rem;
+    font-family: var(--mono);
+    animation: slideIn .3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity:0; transform:translateX(-10px); }
+    to   { opacity:1; transform:translateX(0); }
+  }
+  .alert-item.warning  { background: rgba(255,184,0,.08);  border: 1px solid rgba(255,184,0,.2);  color: var(--warn);   }
+  .alert-item.critical { background: rgba(255,61,90,.08);  border: 1px solid rgba(255,61,90,.2);  color: var(--danger); }
+  .alert-item.ok       { background: rgba(0,255,157,.06);  border: 1px solid rgba(0,255,157,.15); color: var(--accent2);}
+
+  /* ── REFRESH INDICATOR ── */
+  #refresh-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: var(--accent);
+    width: 0%;
+    z-index: 9998;
+    transition: width linear;
+    box-shadow: 0 0 6px var(--accent);
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: .8rem;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 1100px) { .grid-4 { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 700px)  { .grid-4,.grid-2,.grid-3 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div id="refresh-bar"></div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon"></div>
+    <span class="logo-text">SysAdmin&nbsp;//&nbsp;Monitor</span>
+  </div>
+  <div class="header-right">
+    <span id="hostname-badge">—</span>
+    <span id="clock">--:--:--</span>
+    <div id="status-dot"></div>
+  </div>
+</header>
+
+<nav>
+  <button class="active" onclick="showTab('overview',this)">Overview</button>
+  <button onclick="showTab('processos',this)">Processos</button>
+  <button onclick="showTab('disco',this)">Disco</button>
+  <button onclick="showTab('rede',this)">Rede</button>
+  <button onclick="showTab('alertas',this)">Alertas</button>
+</nav>
+
+<main>
+
+  <!-- ═══════ OVERVIEW ═══════ -->
+  <section id="overview" class="section active">
+
+    <div id="alert-container"></div>
+
+    <div class="grid-4">
+      <div class="card">
+        <div class="card-label">CPU</div>
+        <div class="card-value" id="cpu-val">—</div>
+        <div class="card-sub" id="cpu-sub">a carregar...</div>
+        <div class="gauge-wrap">
+          <div class="gauge-bg"><div class="gauge-fill" id="cpu-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">RAM</div>
+        <div class="card-value" id="ram-val">—</div>
+        <div class="card-sub" id="ram-sub">a carregar...</div>
+        <div class="gauge-wrap">
+          <div class="gauge-bg"><div class="gauge-fill" id="ram-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">Disco Principal</div>
+        <div class="card-value" id="disk-val">—</div>
+        <div class="card-sub" id="disk-sub">a carregar...</div>
+        <div class="gauge-wrap">
+          <div class="gauge-bg"><div class="gauge-fill" id="disk-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">Último Update</div>
+        <div class="card-value ok" style="font-size:1.1rem;padding-top:.4rem" id="update-time">—</div>
+        <div class="card-sub">refresh: 15s</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Top Processos — CPU</span>
+          <span class="panel-badge" id="proc-count">0</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>PID</th>
+              <th>CPU (s)</th>
+              <th>RAM (MB)</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="proc-table-body">
+            <tr><td colspan="5" class="empty">a carregar...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Tráfego de Rede</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Adaptador</th>
+              <th>↓ KB/s</th>
+              <th>↑ KB/s</th>
+            </tr>
+          </thead>
+          <tbody id="net-table-body">
+            <tr><td colspan="3" class="empty">a carregar...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ═══════ PROCESSOS ═══════ -->
+  <section id="processos" class="section">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Processos Ativos</span>
+        <span class="panel-badge" id="proc-count2">—</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nome</th><th>PID</th><th>CPU (s)</th><th>RAM (MB)</th><th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="proc-full-body">
+          <tr><td colspan="5" class="empty">a carregar...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ DISCO ═══════ -->
+  <section id="disco" class="section">
+    <div id="disco-cards" class="grid-3"></div>
+  </section>
+
+  <!-- ═══════ REDE ═══════ -->
+  <section id="rede" class="section">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Interfaces de Rede</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>Adaptador</th><th>↓ Recebido KB/s</th><th>↑ Enviado KB/s</th></tr>
+        </thead>
+        <tbody id="net-full-body">
+          <tr><td colspan="3" class="empty">a carregar...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ ALERTAS ═══════ -->
+  <section id="alertas" class="section">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Histórico de Alertas</span>
+        <span class="panel-badge" id="alert-count">0</span>
+      </div>
+      <div id="alert-log" style="padding:1rem;">
+        <div class="empty">Sem alertas registados.</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ══════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════
+const API_URL      = '/api/stats.ps1';   // endpoint IIS
+const REFRESH_MS   = 15000;             // 15 segundos
+const alertHistory = [];
+
+// ══════════════════════════════════════════════════
+//  CLOCK
+// ══════════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('pt-PT', { hour12: false });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ══════════════════════════════════════════════════
+//  TAB NAVIGATION
+// ══════════════════════════════════════════════════
+function showTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ══════════════════════════════════════════════════
+//  GAUGE HELPERS
+// ══════════════════════════════════════════════════
+function gaugeClass(pct) {
+  if (pct >= 90) return 'danger';
+  if (pct >= 75) return 'warn';
+  return '';
+}
+
+function setGauge(barId, pct) {
+  const bar = document.getElementById(barId);
+  if (!bar) return;
+  bar.style.width = pct + '%';
+  bar.className   = 'gauge-fill ' + gaugeClass(pct);
+}
+
+function valClass(pct) {
+  if (pct >= 90) return 'danger';
+  if (pct >= 75) return 'warn';
+  return 'ok';
+}
+
+// ══════════════════════════════════════════════════
+//  FETCH & RENDER
+// ══════════════════════════════════════════════════
+async function fetchStats() {
+  animateRefreshBar();
+  try {
+    const res  = await fetch(API_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    console.error('Erro ao obter dados:', e);
+    document.getElementById('status-dot').style.background = 'var(--danger)';
+    document.getElementById('status-dot').style.boxShadow  = '0 0 6px var(--danger)';
+  }
+}
+
+function render(d) {
+  // status dot → verde
+  const dot = document.getElementById('status-dot');
+  dot.style.background  = 'var(--accent2)';
+  dot.style.boxShadow   = '0 0 6px var(--accent2)';
+
+  // hostname
+  document.getElementById('hostname-badge').textContent = d.hostname || '—';
+
+  // update time
+  document.getElementById('update-time').textContent =
+    d.timestamp ? d.timestamp.split(' ')[1] : '—';
+
+  // ── CPU ──
+  const cpuPct = d.cpu?.usedPct ?? 0;
+  const cpuEl  = document.getElementById('cpu-val');
+  cpuEl.textContent   = cpuPct + '%';
+  cpuEl.className     = 'card-value ' + valClass(cpuPct);
+  document.getElementById('cpu-sub').textContent = 'utilização atual';
+  setGauge('cpu-bar', cpuPct);
+
+  // ── RAM ──
+  const ramPct = d.ram?.usedPct ?? 0;
+  const ramEl  = document.getElementById('ram-val');
+  ramEl.textContent   = ramPct + '%';
+  ramEl.className     = 'card-value ' + valClass(ramPct);
+  document.getElementById('ram-sub').textContent =
+    `${d.ram?.usedGB ?? '—'} / ${d.ram?.totalGB ?? '—'} GB`;
+  setGauge('ram-bar', ramPct);
+
+  // ── Disco principal (C:) ──
+  const cDrive = (d.discos || []).find(x => x.drive === 'C:') || (d.discos || [])[0];
+  if (cDrive) {
+    const diskEl = document.getElementById('disk-val');
+    diskEl.textContent  = cDrive.usedPct + '%';
+    diskEl.className    = 'card-value ' + valClass(cDrive.usedPct);
+    document.getElementById('disk-sub').textContent =
+      `${cDrive.usedGB} / ${cDrive.totalGB} GB (${cDrive.drive})`;
+    setGauge('disk-bar', cDrive.usedPct);
+  }
+
+  // ── Processos (overview top 10) ──
+  renderProcessTable('proc-table-body', d.processos || []);
+  renderProcessTable('proc-full-body',  d.processos || []);
+  document.getElementById('proc-count').textContent  = (d.processos || []).length;
+  document.getElementById('proc-count2').textContent = (d.processos || []).length;
+
+  // ── Rede ──
+  renderNetTable('net-table-body', d.rede || []);
+  renderNetTable('net-full-body',  d.rede || []);
+
+  // ── Disco cards ──
+  renderDiscoCards(d.discos || []);
+
+  // ── Alertas ──
+  renderAlerts(d.alertas || []);
+}
+
+function renderProcessTable(tbodyId, processos) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  if (!processos.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">Sem dados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = processos.map(p => `
+    <tr>
+      <td>${p.name}</td>
+      <td style="color:var(--text-dim)">${p.pid}</td>
+      <td>${p.cpuSec}</td>
+      <td>${p.ramMB}</td>
+      <td><span class="tag tag-ok">${p.status}</span></td>
+    </tr>
+  `).join('');
+}
+
+function renderNetTable(tbodyId, rede) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  if (!rede.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="empty">Sem adaptadores ativos</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rede.map(r => `
+    <tr>
+      <td>${r.adapter}</td>
+      <td style="color:var(--accent2)">↓ ${r.bytesInKB}</td>
+      <td style="color:var(--warn)">↑ ${r.bytesOutKB}</td>
+    </tr>
+  `).join('');
+}
+
+function renderDiscoCards(discos) {
+  const container = document.getElementById('disco-cards');
+  if (!container) return;
+  if (!discos.length) {
+    container.innerHTML = '<div class="empty">Sem dados de disco</div>';
+    return;
+  }
+  container.innerHTML = discos.map(d => `
+    <div class="card">
+      <div class="card-label">Disco ${d.drive}</div>
+      <div class="card-value ${valClass(d.usedPct)}">${d.usedPct}%</div>
+      <div class="card-sub">${d.usedGB} GB usados de ${d.totalGB} GB</div>
+      <div class="gauge-wrap">
+        <div class="gauge-bg">
+          <div class="gauge-fill ${gaugeClass(d.usedPct)}" style="width:${d.usedPct}%"></div>
+        </div>
+      </div>
+      <div class="card-sub" style="margin-top:.5rem">Livre: ${d.freeGB} GB</div>
+    </div>
+  `).join('');
+}
+
+function renderAlerts(alertas) {
+  // Inline (overview)
+  const container = document.getElementById('alert-container');
+  if (alertas.length === 0) {
+    container.innerHTML =
+      '<div class="alert-item ok">✓ Sistema operacional — sem alertas ativos</div>';
+  } else {
+    container.innerHTML = alertas.map(a => `
+      <div class="alert-item ${a.tipo}">⚠ ${a.mensagem}</div>
+    `).join('');
+  }
+
+  // Histórico
+  const ts = new Date().toLocaleTimeString('pt-PT', { hour12: false });
+  alertas.forEach(a => alertHistory.unshift({ ...a, ts }));
+  if (!alertas.length) alertHistory.unshift({ tipo: 'ok', mensagem: 'Sistema OK', ts });
+
+  const logEl = document.getElementById('alert-log');
+  const logCount = document.getElementById('alert-count');
+  const shown = alertHistory.slice(0, 50);
+  logCount.textContent = alertHistory.length;
+
+  logEl.innerHTML = shown.map(a => `
+    <div class="alert-item ${a.tipo}" style="margin-bottom:.4rem">
+      <span style="color:var(--text-dim);min-width:5rem">${a.ts}</span>
+      ${a.mensagem}
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════
+//  REFRESH PROGRESS BAR
+// ══════════════════════════════════════════════════
+function animateRefreshBar() {
+  const bar = document.getElementById('refresh-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  setTimeout(() => {
+    bar.style.transition = `width ${REFRESH_MS}ms linear`;
+    bar.style.width = '100%';
+  }, 50);
+}
+
+// ══════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════
+fetchStats();
+setInterval(fetchStats, REFRESH_MS);
+</script>
+</body>
+</html>

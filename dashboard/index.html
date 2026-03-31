@@ -4,357 +4,90 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SysAdmin Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:        #0a0c10;
-    --bg2:       #0f1218;
-    --bg3:       #141820;
-    --border:    #1e2530;
-    --accent:    #00d4ff;
-    --accent2:   #00ff9d;
-    --warn:      #ffb800;
-    --danger:    #ff3d5a;
-    --text:      #c8d0dc;
-    --text-dim:  #5a6478;
-    --mono:      'Share Tech Mono', monospace;
-    --sans:      'Barlow', sans-serif;
+    --bg:#0a0c10;--bg2:#0f1218;--bg3:#141820;--border:#1e2530;
+    --accent:#00d4ff;--accent2:#00ff9d;--warn:#ffb800;--danger:#ff3d5a;
+    --text:#c8d0dc;--text-dim:#5a6478;
+    --mono:'Consolas','Courier New',monospace;
+    --sans:'Segoe UI','Helvetica',sans-serif;
   }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);pointer-events:none;z-index:9999}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  header{display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:56px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+  .logo{display:flex;align-items:center;gap:.75rem}
+  .logo-icon{width:28px;height:28px;border:2px solid var(--accent);border-radius:4px;display:grid;place-items:center;position:relative}
+  .logo-icon::before{content:'';width:10px;height:10px;background:var(--accent);border-radius:50%;box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+  .logo-text{font-family:var(--mono);font-size:.9rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase}
+  .header-right{display:flex;align-items:center;gap:1.5rem}
+  #clock{font-family:var(--mono);font-size:.85rem;color:var(--text-dim);letter-spacing:.1em}
+  #hostname-badge{font-family:var(--mono);font-size:.75rem;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);color:var(--accent);padding:.25rem .75rem;border-radius:3px;letter-spacing:.1em}
+  #uptime-badge{font-family:var(--mono);font-size:.7rem;color:var(--text-dim)}
+  #status-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);box-shadow:0 0 6px var(--accent2);animation:pulse 2s infinite}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+  nav{display:flex;gap:0;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1rem;overflow-x:auto}
+  nav button{background:none;border:none;border-bottom:2px solid transparent;color:var(--text-dim);font-family:var(--sans);font-size:.75rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.65rem 1rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+  nav button:hover{color:var(--text)}
+  nav button.active{color:var(--accent);border-bottom-color:var(--accent)}
 
-  /* Scanlines overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.07) 2px,
-      rgba(0,0,0,0.07) 4px
-    );
-    pointer-events: none;
-    z-index: 9999;
-  }
+  main{padding:1.5rem 2rem;max-width:1600px;margin:0 auto}
+  .section{display:none}.section.active{display:block}
 
-  /* ── HEADER ── */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 2rem;
-    height: 56px;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
+  .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-bottom:1.5rem}
 
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: .75rem;
-  }
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:1.25rem;position:relative;overflow:hidden;transition:border-color .2s}
+  .card:hover{border-color:rgba(0,212,255,.3)}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent);opacity:.4}
+  .card-label{font-size:.7rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--text-dim);margin-bottom:.5rem}
+  .card-value{font-family:var(--mono);font-size:2rem;color:var(--accent);line-height:1;margin-bottom:.25rem}
+  .card-value.warn{color:var(--warn)}.card-value.danger{color:var(--danger)}.card-value.ok{color:var(--accent2)}
+  .card-sub{font-size:.75rem;color:var(--text-dim);font-family:var(--mono)}
 
-  .logo-icon {
-    width: 28px; height: 28px;
-    border: 2px solid var(--accent);
-    border-radius: 4px;
-    display: grid;
-    place-items: center;
-    position: relative;
-  }
-  .logo-icon::before {
-    content: '';
-    width: 10px; height: 10px;
-    background: var(--accent);
-    border-radius: 50%;
-    box-shadow: 0 0 8px var(--accent);
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0%,100% { opacity:1; transform:scale(1); }
-    50%      { opacity:.5; transform:scale(.7); }
-  }
+  .gauge-wrap{margin-top:.75rem}
+  .gauge-bg{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+  .gauge-fill{height:100%;border-radius:2px;transition:width .8s ease;background:var(--accent2)}
+  .gauge-fill.warn{background:var(--warn)}.gauge-fill.danger{background:var(--danger)}
 
-  .logo-text {
-    font-family: var(--mono);
-    font-size: .9rem;
-    color: var(--accent);
-    letter-spacing: .15em;
-    text-transform: uppercase;
-  }
+  .panel{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:1rem}
+  .panel-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg3)}
+  .panel-title{font-size:.75rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--text)}
+  .panel-badge{font-family:var(--mono);font-size:.7rem;padding:.15rem .5rem;border-radius:3px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:var(--accent)}
 
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-  }
+  .data-table{width:100%;border-collapse:collapse}
+  .data-table th{text-align:left;font-size:.65rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--text-dim);padding:.5rem 1rem;border-bottom:1px solid var(--border)}
+  .data-table td{padding:.5rem 1rem;font-size:.78rem;font-family:var(--mono);border-bottom:1px solid rgba(30,37,48,.6);color:var(--text)}
+  .data-table tr:hover td{background:rgba(255,255,255,.02)}
 
-  #clock {
-    font-family: var(--mono);
-    font-size: .85rem;
-    color: var(--text-dim);
-    letter-spacing: .1em;
-  }
+  .tag{font-size:.65rem;padding:.1rem .5rem;border-radius:3px;font-family:var(--mono);font-weight:600}
+  .tag-ok{background:rgba(0,255,157,.1);color:var(--accent2);border:1px solid rgba(0,255,157,.2)}
+  .tag-warn{background:rgba(255,184,0,.1);color:var(--warn);border:1px solid rgba(255,184,0,.2)}
+  .tag-danger{background:rgba(255,61,90,.1);color:var(--danger);border:1px solid rgba(255,61,90,.2)}
+  .tag-dim{background:rgba(90,100,120,.1);color:var(--text-dim);border:1px solid rgba(90,100,120,.2)}
 
-  #hostname-badge {
-    font-family: var(--mono);
-    font-size: .75rem;
-    background: rgba(0,212,255,.08);
-    border: 1px solid rgba(0,212,255,.25);
-    color: var(--accent);
-    padding: .25rem .75rem;
-    border-radius: 3px;
-    letter-spacing: .1em;
-  }
+  #alert-container{margin-bottom:1.5rem}
+  .alert-item{display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;border-radius:4px;margin-bottom:.5rem;font-size:.8rem;font-family:var(--mono);animation:slideIn .3s ease}
+  @keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+  .alert-item.warning{background:rgba(255,184,0,.08);border:1px solid rgba(255,184,0,.2);color:var(--warn)}
+  .alert-item.critical{background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.2);color:var(--danger)}
+  .alert-item.ok{background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.15);color:var(--accent2)}
 
-  #status-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--accent2);
-    box-shadow: 0 0 6px var(--accent2);
-    animation: pulse 2s infinite;
-  }
+  #refresh-bar{position:fixed;top:0;left:0;height:2px;background:var(--accent);width:0%;z-index:9998;transition:width linear;box-shadow:0 0 6px var(--accent)}
+  .empty{text-align:center;padding:2rem;color:var(--text-dim);font-family:var(--mono);font-size:.8rem}
+  .panel-body{padding:1rem}
+  .stat-row{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(30,37,48,.4);font-size:.8rem}
+  .stat-row:last-child{border-bottom:none}
+  .stat-label{color:var(--text-dim)}.stat-value{font-family:var(--mono);color:var(--text)}
 
-  /* ── NAV ── */
-  nav {
-    display: flex;
-    gap: 0;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 0 2rem;
-    overflow-x: auto;
-  }
-
-  nav button {
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: var(--text-dim);
-    font-family: var(--sans);
-    font-size: .8rem;
-    font-weight: 600;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    padding: .75rem 1.25rem;
-    cursor: pointer;
-    transition: all .2s;
-    white-space: nowrap;
-  }
-  nav button:hover  { color: var(--text); }
-  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-  /* ── MAIN ── */
-  main {
-    padding: 1.5rem 2rem;
-    max-width: 1600px;
-    margin: 0 auto;
-  }
-
-  .section { display: none; }
-  .section.active { display: block; }
-
-  /* ── GRID ── */
-  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 1.5rem; }
-  .grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 1rem; margin-bottom: 1.5rem; }
-  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 1.5rem; }
-
-  /* ── CARD ── */
-  .card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 1.25rem;
-    position: relative;
-    overflow: hidden;
-    transition: border-color .2s;
-  }
-  .card:hover { border-color: rgba(0,212,255,.3); }
-  .card::before {
-    content:'';
-    position:absolute;
-    top:0; left:0; right:0;
-    height:2px;
-    background: linear-gradient(90deg, var(--accent), transparent);
-    opacity: .4;
-  }
-
-  .card-label {
-    font-size: .7rem;
-    font-weight: 600;
-    letter-spacing: .15em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: .5rem;
-  }
-
-  .card-value {
-    font-family: var(--mono);
-    font-size: 2rem;
-    color: var(--accent);
-    line-height: 1;
-    margin-bottom: .25rem;
-  }
-  .card-value.warn   { color: var(--warn); }
-  .card-value.danger { color: var(--danger); }
-  .card-value.ok     { color: var(--accent2); }
-
-  .card-sub {
-    font-size: .75rem;
-    color: var(--text-dim);
-    font-family: var(--mono);
-  }
-
-  /* ── GAUGE BAR ── */
-  .gauge-wrap { margin-top: .75rem; }
-  .gauge-bg {
-    height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .gauge-fill {
-    height: 100%;
-    border-radius: 2px;
-    transition: width .8s ease;
-    background: var(--accent2);
-  }
-  .gauge-fill.warn   { background: var(--warn); }
-  .gauge-fill.danger { background: var(--danger); }
-
-  /* ── PANEL (card with title) ── */
-  .panel {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: 1rem;
-  }
-
-  .panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: .75rem 1.25rem;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg3);
-  }
-
-  .panel-title {
-    font-size: .75rem;
-    font-weight: 700;
-    letter-spacing: .15em;
-    text-transform: uppercase;
-    color: var(--text);
-  }
-
-  .panel-badge {
-    font-family: var(--mono);
-    font-size: .7rem;
-    padding: .15rem .5rem;
-    border-radius: 3px;
-    background: rgba(0,212,255,.1);
-    border: 1px solid rgba(0,212,255,.2);
-    color: var(--accent);
-  }
-
-  /* ── TABLE ── */
-  .data-table { width: 100%; border-collapse: collapse; }
-  .data-table th {
-    text-align: left;
-    font-size: .65rem;
-    font-weight: 700;
-    letter-spacing: .15em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    padding: .5rem 1rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .data-table td {
-    padding: .6rem 1rem;
-    font-size: .8rem;
-    font-family: var(--mono);
-    border-bottom: 1px solid rgba(30,37,48,.6);
-    color: var(--text);
-  }
-  .data-table tr:last-child td { border-bottom: none; }
-  .data-table tr:hover td { background: rgba(255,255,255,.02); }
-
-  .tag {
-    font-size: .65rem;
-    padding: .1rem .5rem;
-    border-radius: 3px;
-    font-family: var(--mono);
-    font-weight: 600;
-  }
-  .tag-ok      { background: rgba(0,255,157,.1); color: var(--accent2); border: 1px solid rgba(0,255,157,.2); }
-  .tag-warn    { background: rgba(255,184,0,.1);  color: var(--warn);    border: 1px solid rgba(255,184,0,.2); }
-  .tag-danger  { background: rgba(255,61,90,.1);  color: var(--danger);  border: 1px solid rgba(255,61,90,.2); }
-  .tag-dim     { background: rgba(90,100,120,.1); color: var(--text-dim);border: 1px solid rgba(90,100,120,.2); }
-
-  /* ── ALERT BOX ── */
-  #alert-container { margin-bottom: 1.5rem; }
-
-  .alert-item {
-    display: flex;
-    align-items: center;
-    gap: .75rem;
-    padding: .6rem 1rem;
-    border-radius: 4px;
-    margin-bottom: .5rem;
-    font-size: .8rem;
-    font-family: var(--mono);
-    animation: slideIn .3s ease;
-  }
-  @keyframes slideIn {
-    from { opacity:0; transform:translateX(-10px); }
-    to   { opacity:1; transform:translateX(0); }
-  }
-  .alert-item.warning  { background: rgba(255,184,0,.08);  border: 1px solid rgba(255,184,0,.2);  color: var(--warn);   }
-  .alert-item.critical { background: rgba(255,61,90,.08);  border: 1px solid rgba(255,61,90,.2);  color: var(--danger); }
-  .alert-item.ok       { background: rgba(0,255,157,.06);  border: 1px solid rgba(0,255,157,.15); color: var(--accent2);}
-
-  /* ── REFRESH INDICATOR ── */
-  #refresh-bar {
-    position: fixed;
-    top: 0; left: 0;
-    height: 2px;
-    background: var(--accent);
-    width: 0%;
-    z-index: 9998;
-    transition: width linear;
-    box-shadow: 0 0 6px var(--accent);
-  }
-
-  /* ── EMPTY STATE ── */
-  .empty {
-    text-align: center;
-    padding: 3rem;
-    color: var(--text-dim);
-    font-family: var(--mono);
-    font-size: .8rem;
-  }
-
-  /* ── RESPONSIVE ── */
-  @media (max-width: 1100px) { .grid-4 { grid-template-columns: repeat(2,1fr); } }
-  @media (max-width: 700px)  { .grid-4,.grid-2,.grid-3 { grid-template-columns: 1fr; } }
+  @media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:700px){.grid-4,.grid-2,.grid-3{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-
 <div id="refresh-bar"></div>
 
 <header>
@@ -363,7 +96,8 @@
     <span class="logo-text">SysAdmin&nbsp;//&nbsp;Monitor</span>
   </div>
   <div class="header-right">
-    <span id="hostname-badge">—</span>
+    <span id="hostname-badge">---</span>
+    <span id="uptime-badge"></span>
     <span id="clock">--:--:--</span>
     <div id="status-dot"></div>
   </div>
@@ -372,143 +106,204 @@
 <nav>
   <button class="active" onclick="showTab('overview',this)">Overview</button>
   <button onclick="showTab('processos',this)">Processos</button>
-  <button onclick="showTab('disco',this)">Disco</button>
+  <button onclick="showTab('utilizadores',this)">Utilizadores</button>
+  <button onclick="showTab('ficheiros',this)">Ficheiros</button>
+  <button onclick="showTab('servicos',this)">Servi&ccedil;os</button>
   <button onclick="showTab('rede',this)">Rede</button>
-  <button onclick="showTab('alertas',this)">Alertas</button>
+  <button onclick="showTab('seguranca',this)">Seguran&ccedil;a</button>
+  <button onclick="showTab('backup',this)">Backup</button>
 </nav>
 
 <main>
 
-  <!-- ═══════ OVERVIEW ═══════ -->
+  <!-- ══════ OVERVIEW ══════ -->
   <section id="overview" class="section active">
-
     <div id="alert-container"></div>
-
     <div class="grid-4">
       <div class="card">
         <div class="card-label">CPU</div>
-        <div class="card-value" id="cpu-val">—</div>
+        <div class="card-value" id="cpu-val">---</div>
         <div class="card-sub" id="cpu-sub">a carregar...</div>
-        <div class="gauge-wrap">
-          <div class="gauge-bg"><div class="gauge-fill" id="cpu-bar" style="width:0%"></div></div>
-        </div>
+        <div class="gauge-wrap"><div class="gauge-bg"><div class="gauge-fill" id="cpu-bar" style="width:0%"></div></div></div>
       </div>
       <div class="card">
         <div class="card-label">RAM</div>
-        <div class="card-value" id="ram-val">—</div>
+        <div class="card-value" id="ram-val">---</div>
         <div class="card-sub" id="ram-sub">a carregar...</div>
-        <div class="gauge-wrap">
-          <div class="gauge-bg"><div class="gauge-fill" id="ram-bar" style="width:0%"></div></div>
-        </div>
+        <div class="gauge-wrap"><div class="gauge-bg"><div class="gauge-fill" id="ram-bar" style="width:0%"></div></div></div>
       </div>
       <div class="card">
         <div class="card-label">Disco Principal</div>
-        <div class="card-value" id="disk-val">—</div>
+        <div class="card-value" id="disk-val">---</div>
         <div class="card-sub" id="disk-sub">a carregar...</div>
-        <div class="gauge-wrap">
-          <div class="gauge-bg"><div class="gauge-fill" id="disk-bar" style="width:0%"></div></div>
-        </div>
+        <div class="gauge-wrap"><div class="gauge-bg"><div class="gauge-fill" id="disk-bar" style="width:0%"></div></div></div>
       </div>
       <div class="card">
-        <div class="card-label">Último Update</div>
-        <div class="card-value ok" style="font-size:1.1rem;padding-top:.4rem" id="update-time">—</div>
+        <div class="card-label">&Uacute;ltimo Update</div>
+        <div class="card-value ok" style="font-size:1.1rem;padding-top:.4rem" id="update-time">---</div>
         <div class="card-sub">refresh: 15s</div>
       </div>
     </div>
-
     <div class="grid-2">
       <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Top Processos — CPU</span>
-          <span class="panel-badge" id="proc-count">0</span>
-        </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>PID</th>
-              <th>CPU (s)</th>
-              <th>RAM (MB)</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody id="proc-table-body">
-            <tr><td colspan="5" class="empty">a carregar...</td></tr>
-          </tbody>
-        </table>
+        <div class="panel-header"><span class="panel-title">Top Processos</span><span class="panel-badge" id="proc-count">0</span></div>
+        <table class="data-table"><thead><tr><th>Nome</th><th>PID</th><th>CPU (s)</th><th>RAM (MB)</th></tr></thead>
+        <tbody id="proc-table-body"><tr><td colspan="4" class="empty">a carregar...</td></tr></tbody></table>
       </div>
       <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Tráfego de Rede</span>
-        </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Adaptador</th>
-              <th>↓ KB/s</th>
-              <th>↑ KB/s</th>
-            </tr>
-          </thead>
-          <tbody id="net-table-body">
-            <tr><td colspan="3" class="empty">a carregar...</td></tr>
-          </tbody>
-        </table>
+        <div class="panel-header"><span class="panel-title">Tr&aacute;fego de Rede</span></div>
+        <table class="data-table"><thead><tr><th>Adaptador</th><th>&darr; KB/s</th><th>&uarr; KB/s</th></tr></thead>
+        <tbody id="net-table-body"><tr><td colspan="3" class="empty">a carregar...</td></tr></tbody></table>
       </div>
     </div>
-
   </section>
 
-  <!-- ═══════ PROCESSOS ═══════ -->
+  <!-- ══════ PROCESSOS ══════ -->
   <section id="processos" class="section">
     <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Processos Ativos</span>
-        <span class="panel-badge" id="proc-count2">—</span>
-      </div>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Nome</th><th>PID</th><th>CPU (s)</th><th>RAM (MB)</th><th>Estado</th>
-          </tr>
-        </thead>
-        <tbody id="proc-full-body">
-          <tr><td colspan="5" class="empty">a carregar...</td></tr>
-        </tbody>
-      </table>
+      <div class="panel-header"><span class="panel-title">Processos Ativos</span><span class="panel-badge" id="proc-count2">---</span></div>
+      <table class="data-table"><thead><tr><th>Nome</th><th>PID</th><th>CPU (s)</th><th>RAM (MB)</th><th>Estado</th></tr></thead>
+      <tbody id="proc-full-body"><tr><td colspan="5" class="empty">a carregar...</td></tr></tbody></table>
     </div>
   </section>
 
-  <!-- ═══════ DISCO ═══════ -->
-  <section id="disco" class="section">
-    <div id="disco-cards" class="grid-3"></div>
+  <!-- ══════ UTILIZADORES ══════ -->
+  <section id="utilizadores" class="section">
+    <div class="grid-4">
+      <div class="card"><div class="card-label">Total Utilizadores</div><div class="card-value ok" id="users-total">---</div></div>
+      <div class="card"><div class="card-label">Ativos</div><div class="card-value ok" id="users-ativos">---</div></div>
+      <div class="card"><div class="card-label">Inativos</div><div class="card-value warn" id="users-inativos">---</div></div>
+      <div class="card"><div class="card-label">Total Grupos</div><div class="card-value" id="users-grupos">---</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Utilizadores AD</span></div>
+        <table class="data-table"><thead><tr><th>Username</th><th>Nome</th><th>Estado</th><th>&Uacute;ltimo Login</th></tr></thead>
+        <tbody id="users-table"><tr><td colspan="4" class="empty">a carregar...</td></tr></tbody></table>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Grupos AD</span></div>
+        <table class="data-table"><thead><tr><th>Grupo</th><th>Membros</th><th>Descri&ccedil;&atilde;o</th></tr></thead>
+        <tbody id="groups-table"><tr><td colspan="3" class="empty">a carregar...</td></tr></tbody></table>
+      </div>
+    </div>
   </section>
 
-  <!-- ═══════ REDE ═══════ -->
+  <!-- ══════ FICHEIROS ══════ -->
+  <section id="ficheiros" class="section">
+    <div class="grid-3" id="disco-cards"></div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Ficheiros Grandes</span><span class="panel-badge" id="fs-grandes-count">0</span></div>
+        <table class="data-table"><thead><tr><th>Nome</th><th>Tamanho (MB)</th><th>Alterado</th></tr></thead>
+        <tbody id="fs-grandes-table"><tr><td colspan="3" class="empty">a carregar...</td></tr></tbody></table>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Ficheiros Suspeitos</span><span class="panel-badge" id="fs-susp-count">0</span></div>
+        <table class="data-table"><thead><tr><th>Nome</th><th>Ext</th><th>Tamanho (MB)</th><th>Alterado</th></tr></thead>
+        <tbody id="fs-susp-table"><tr><td colspan="4" class="empty">a carregar...</td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Pastas Partilhadas</span></div>
+      <table class="data-table"><thead><tr><th>Nome</th><th>Caminho</th><th>Descri&ccedil;&atilde;o</th></tr></thead>
+      <tbody id="shares-table"><tr><td colspan="3" class="empty">a carregar...</td></tr></tbody></table>
+    </div>
+  </section>
+
+  <!-- ══════ SERVICOS ══════ -->
+  <section id="servicos" class="section">
+    <div class="grid-4">
+      <div class="card"><div class="card-label">Servi&ccedil;os Ativos</div><div class="card-value ok" id="svc-ativos">---</div></div>
+      <div class="card"><div class="card-label">Servi&ccedil;os Parados</div><div class="card-value warn" id="svc-parados">---</div></div>
+      <div class="card"><div class="card-label">Cr&iacute;ticos Down</div><div class="card-value danger" id="svc-crit-down">---</div></div>
+      <div class="card"><div class="card-label">Roles Instaladas</div><div class="card-value" id="svc-roles">---</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Servi&ccedil;os Cr&iacute;ticos</span></div>
+        <table class="data-table"><thead><tr><th>Servi&ccedil;o</th><th>Nome</th><th>Estado</th><th>Arranque</th></tr></thead>
+        <tbody id="svc-criticos-table"><tr><td colspan="4" class="empty">a carregar...</td></tr></tbody></table>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Autom&aacute;ticos Parados</span></div>
+        <table class="data-table"><thead><tr><th>Servi&ccedil;o</th><th>Nome</th><th>Estado</th></tr></thead>
+        <tbody id="svc-parados-table"><tr><td colspan="3" class="empty">a carregar...</td></tr></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════ REDE ══════ -->
   <section id="rede" class="section">
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Interfaces de Rede</span>
+    <div class="grid-3">
+      <div class="card"><div class="card-label">Portas Abertas</div><div class="card-value" id="net-portas">---</div></div>
+      <div class="card"><div class="card-label">Conex&otilde;es Ativas</div><div class="card-value" id="net-conex">---</div></div>
+      <div class="card"><div class="card-label">Conectividade</div><div class="card-value ok" id="net-ping-status">---</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Interfaces de Rede</span></div>
+        <table class="data-table"><thead><tr><th>Adaptador</th><th>IP</th><th>MAC</th><th>Estado</th></tr></thead>
+        <tbody id="net-iface-table"><tr><td colspan="4" class="empty">a carregar...</td></tr></tbody></table>
       </div>
-      <table class="data-table">
-        <thead>
-          <tr><th>Adaptador</th><th>↓ Recebido KB/s</th><th>↑ Enviado KB/s</th></tr>
-        </thead>
-        <tbody id="net-full-body">
-          <tr><td colspan="3" class="empty">a carregar...</td></tr>
-        </tbody>
-      </table>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Portas Abertas (Listening)</span></div>
+        <table class="data-table"><thead><tr><th>Porta</th><th>Processo</th><th>PID</th></tr></thead>
+        <tbody id="net-portas-table"><tr><td colspan="3" class="empty">a carregar...</td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Conex&otilde;es Ativas</span></div>
+      <table class="data-table"><thead><tr><th>Local</th><th>Remoto</th><th>Porta Remota</th><th>Processo</th></tr></thead>
+      <tbody id="net-conex-table"><tr><td colspan="4" class="empty">a carregar...</td></tr></tbody></table>
     </div>
   </section>
 
-  <!-- ═══════ ALERTAS ═══════ -->
-  <section id="alertas" class="section">
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Histórico de Alertas</span>
-        <span class="panel-badge" id="alert-count">0</span>
+  <!-- ══════ SEGURANCA ══════ -->
+  <section id="seguranca" class="section">
+    <div class="grid-4">
+      <div class="card"><div class="card-label">Logins Falhados (24h)</div><div class="card-value" id="sec-falhados">---</div></div>
+      <div class="card"><div class="card-label">Logins Sucesso (24h)</div><div class="card-value ok" id="sec-sucesso">---</div></div>
+      <div class="card"><div class="card-label">Contas Bloqueadas</div><div class="card-value" id="sec-bloqueadas">---</div></div>
+      <div class="card"><div class="card-label">Firewall</div><div class="card-value ok" id="sec-firewall">---</div></div>
+    </div>
+    <div id="sec-alertas"></div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Logins Falhados</span></div>
+        <table class="data-table"><thead><tr><th>Data/Hora</th><th>Utilizador</th><th>IP Origem</th></tr></thead>
+        <tbody id="sec-falhados-table"><tr><td colspan="3" class="empty">a carregar...</td></tr></tbody></table>
       </div>
-      <div id="alert-log" style="padding:1rem;">
-        <div class="empty">Sem alertas registados.</div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Logins com Sucesso</span></div>
+        <table class="data-table"><thead><tr><th>Data/Hora</th><th>Utilizador</th><th>Tipo</th></tr></thead>
+        <tbody id="sec-sucesso-table"><tr><td colspan="3" class="empty">a carregar...</td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Estado do Firewall</span></div>
+      <div class="panel-body" id="sec-firewall-detail"></div>
+    </div>
+  </section>
+
+  <!-- ══════ BACKUP ══════ -->
+  <section id="backup" class="section">
+    <div class="grid-4">
+      <div class="card"><div class="card-label">Total Backups</div><div class="card-value" id="bkp-total">---</div></div>
+      <div class="card"><div class="card-label">Tamanho Total</div><div class="card-value" id="bkp-size">---</div></div>
+      <div class="card"><div class="card-label">&Uacute;ltimo Backup</div><div class="card-value ok" style="font-size:1rem" id="bkp-ultimo">---</div></div>
+      <div class="card"><div class="card-label">Agendamentos</div><div class="card-value" id="bkp-agendados">---</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Backups Existentes</span></div>
+        <table class="data-table"><thead><tr><th>Nome</th><th>Tipo</th><th>Tamanho (MB)</th><th>Data</th></tr></thead>
+        <tbody id="bkp-table"><tr><td colspan="4" class="empty">a carregar...</td></tr></tbody></table>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Tarefas Agendadas</span></div>
+        <table class="data-table"><thead><tr><th>Nome</th><th>Estado</th><th>&Uacute;ltima Execu&ccedil;&atilde;o</th><th>Resultado</th></tr></thead>
+        <tbody id="bkp-agenda-table"><tr><td colspan="4" class="empty">a carregar...</td></tr></tbody></table>
       </div>
     </div>
   </section>
@@ -516,235 +311,317 @@
 </main>
 
 <script>
-// ══════════════════════════════════════════════════
-//  CONFIG
-// ══════════════════════════════════════════════════
-const API_URL      = '/api/stats.ps1';   // endpoint IIS
-const REFRESH_MS   = 15000;             // 15 segundos
-const alertHistory = [];
+// ═══════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════
+const API = {
+  stats:      '/api/stats.ps1',
+  users:      '/api/users.ps1',
+  filesystem: '/api/filesystem.ps1',
+  services:   '/api/services.ps1',
+  network:    '/api/network.ps1',
+  security:   '/api/security.ps1',
+  backup:     '/api/backup.ps1'
+};
+const REFRESH_MS = 15000;
+let currentTab = 'overview';
 
-// ══════════════════════════════════════════════════
-//  CLOCK
-// ══════════════════════════════════════════════════
-function updateClock() {
-  const now = new Date();
-  document.getElementById('clock').textContent =
-    now.toLocaleTimeString('pt-PT', { hour12: false });
+// ═══════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════
+function updateClock(){
+  document.getElementById('clock').textContent=new Date().toLocaleTimeString('pt-PT',{hour12:false});
 }
-setInterval(updateClock, 1000);
-updateClock();
+setInterval(updateClock,1000);updateClock();
 
-// ══════════════════════════════════════════════════
-//  TAB NAVIGATION
-// ══════════════════════════════════════════════════
-function showTab(id, btn) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+// ═══════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════
+function showTab(id,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
+  currentTab=id;
+  refreshCurrentTab();
 }
 
-// ══════════════════════════════════════════════════
-//  GAUGE HELPERS
-// ══════════════════════════════════════════════════
-function gaugeClass(pct) {
-  if (pct >= 90) return 'danger';
-  if (pct >= 75) return 'warn';
-  return '';
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+function gc(pct){return pct>=90?'danger':pct>=75?'warn':''}
+function vc(pct){return pct>=90?'danger':pct>=75?'warn':'ok'}
+function setGauge(id,pct){
+  const b=document.getElementById(id);if(!b)return;
+  b.style.width=pct+'%';b.className='gauge-fill '+gc(pct);
+}
+function tagFor(estado){
+  if(estado==='Running')return'<span class="tag tag-ok">Running</span>';
+  if(estado==='Stopped')return'<span class="tag tag-danger">Stopped</span>';
+  return'<span class="tag tag-dim">'+estado+'</span>';
+}
+function safe(v){return v||'---'}
+
+async function fetchJSON(url){
+  try{
+    const r=await fetch(url+'?t='+Date.now());
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return await r.json();
+  }catch(e){console.error('Erro:',url,e);return null;}
 }
 
-function setGauge(barId, pct) {
-  const bar = document.getElementById(barId);
-  if (!bar) return;
-  bar.style.width = pct + '%';
-  bar.className   = 'gauge-fill ' + gaugeClass(pct);
-}
-
-function valClass(pct) {
-  if (pct >= 90) return 'danger';
-  if (pct >= 75) return 'warn';
-  return 'ok';
-}
-
-// ══════════════════════════════════════════════════
-//  FETCH & RENDER
-// ══════════════════════════════════════════════════
-async function fetchStats() {
+// ═══════════════════════════════════════
+// FETCH & RENDER - STATS (overview)
+// ═══════════════════════════════════════
+async function fetchStats(){
   animateRefreshBar();
-  try {
-    const res  = await fetch(API_URL + '?t=' + Date.now());
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    render(data);
-  } catch (e) {
-    console.error('Erro ao obter dados:', e);
-    document.getElementById('status-dot').style.background = 'var(--danger)';
-    document.getElementById('status-dot').style.boxShadow  = '0 0 6px var(--danger)';
-  }
-}
-
-function render(d) {
-  // status dot → verde
-  const dot = document.getElementById('status-dot');
-  dot.style.background  = 'var(--accent2)';
-  dot.style.boxShadow   = '0 0 6px var(--accent2)';
-
-  // hostname
-  document.getElementById('hostname-badge').textContent = d.hostname || '—';
-
-  // update time
-  document.getElementById('update-time').textContent =
-    d.timestamp ? d.timestamp.split(' ')[1] : '—';
-
-  // ── CPU ──
-  const cpuPct = d.cpu?.usedPct ?? 0;
-  const cpuEl  = document.getElementById('cpu-val');
-  cpuEl.textContent   = cpuPct + '%';
-  cpuEl.className     = 'card-value ' + valClass(cpuPct);
-  document.getElementById('cpu-sub').textContent = 'utilização atual';
-  setGauge('cpu-bar', cpuPct);
-
-  // ── RAM ──
-  const ramPct = d.ram?.usedPct ?? 0;
-  const ramEl  = document.getElementById('ram-val');
-  ramEl.textContent   = ramPct + '%';
-  ramEl.className     = 'card-value ' + valClass(ramPct);
-  document.getElementById('ram-sub').textContent =
-    `${d.ram?.usedGB ?? '—'} / ${d.ram?.totalGB ?? '—'} GB`;
-  setGauge('ram-bar', ramPct);
-
-  // ── Disco principal (C:) ──
-  const cDrive = (d.discos || []).find(x => x.drive === 'C:') || (d.discos || [])[0];
-  if (cDrive) {
-    const diskEl = document.getElementById('disk-val');
-    diskEl.textContent  = cDrive.usedPct + '%';
-    diskEl.className    = 'card-value ' + valClass(cDrive.usedPct);
-    document.getElementById('disk-sub').textContent =
-      `${cDrive.usedGB} / ${cDrive.totalGB} GB (${cDrive.drive})`;
-    setGauge('disk-bar', cDrive.usedPct);
-  }
-
-  // ── Processos (overview top 10) ──
-  renderProcessTable('proc-table-body', d.processos || []);
-  renderProcessTable('proc-full-body',  d.processos || []);
-  document.getElementById('proc-count').textContent  = (d.processos || []).length;
-  document.getElementById('proc-count2').textContent = (d.processos || []).length;
-
-  // ── Rede ──
-  renderNetTable('net-table-body', d.rede || []);
-  renderNetTable('net-full-body',  d.rede || []);
-
-  // ── Disco cards ──
-  renderDiscoCards(d.discos || []);
-
-  // ── Alertas ──
-  renderAlerts(d.alertas || []);
-}
-
-function renderProcessTable(tbodyId, processos) {
-  const tbody = document.getElementById(tbodyId);
-  if (!tbody) return;
-  if (!processos.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty">Sem dados</td></tr>';
+  const d=await fetchJSON(API.stats);
+  if(!d){
+    document.getElementById('status-dot').style.background='var(--danger)';
+    document.getElementById('status-dot').style.boxShadow='0 0 6px var(--danger)';
     return;
   }
-  tbody.innerHTML = processos.map(p => `
-    <tr>
-      <td>${p.name}</td>
-      <td style="color:var(--text-dim)">${p.pid}</td>
-      <td>${p.cpuSec}</td>
-      <td>${p.ramMB}</td>
-      <td><span class="tag tag-ok">${p.status}</span></td>
-    </tr>
-  `).join('');
-}
+  const dot=document.getElementById('status-dot');
+  dot.style.background='var(--accent2)';dot.style.boxShadow='0 0 6px var(--accent2)';
 
-function renderNetTable(tbodyId, rede) {
-  const tbody = document.getElementById(tbodyId);
-  if (!tbody) return;
-  if (!rede.length) {
-    tbody.innerHTML = '<tr><td colspan="3" class="empty">Sem adaptadores ativos</td></tr>';
-    return;
-  }
-  tbody.innerHTML = rede.map(r => `
-    <tr>
-      <td>${r.adapter}</td>
-      <td style="color:var(--accent2)">↓ ${r.bytesInKB}</td>
-      <td style="color:var(--warn)">↑ ${r.bytesOutKB}</td>
-    </tr>
-  `).join('');
-}
+  document.getElementById('hostname-badge').textContent=d.hostname||'---';
+  if(d.uptime)document.getElementById('uptime-badge').textContent='Up: '+d.uptime;
+  document.getElementById('update-time').textContent=d.timestamp?d.timestamp.split(' ')[1]:'---';
 
-function renderDiscoCards(discos) {
-  const container = document.getElementById('disco-cards');
-  if (!container) return;
-  if (!discos.length) {
-    container.innerHTML = '<div class="empty">Sem dados de disco</div>';
-    return;
-  }
-  container.innerHTML = discos.map(d => `
-    <div class="card">
-      <div class="card-label">Disco ${d.drive}</div>
-      <div class="card-value ${valClass(d.usedPct)}">${d.usedPct}%</div>
-      <div class="card-sub">${d.usedGB} GB usados de ${d.totalGB} GB</div>
-      <div class="gauge-wrap">
-        <div class="gauge-bg">
-          <div class="gauge-fill ${gaugeClass(d.usedPct)}" style="width:${d.usedPct}%"></div>
-        </div>
-      </div>
-      <div class="card-sub" style="margin-top:.5rem">Livre: ${d.freeGB} GB</div>
-    </div>
-  `).join('');
-}
+  const cpuPct=d.cpu?.usedPct??0;
+  const cpuEl=document.getElementById('cpu-val');
+  cpuEl.textContent=cpuPct+'%';cpuEl.className='card-value '+vc(cpuPct);
+  document.getElementById('cpu-sub').textContent='utilizacao atual';
+  setGauge('cpu-bar',cpuPct);
 
-function renderAlerts(alertas) {
-  // Inline (overview)
-  const container = document.getElementById('alert-container');
-  if (alertas.length === 0) {
-    container.innerHTML =
-      '<div class="alert-item ok">✓ Sistema operacional — sem alertas ativos</div>';
-  } else {
-    container.innerHTML = alertas.map(a => `
-      <div class="alert-item ${a.tipo}">⚠ ${a.mensagem}</div>
-    `).join('');
+  const ramPct=d.ram?.usedPct??0;
+  const ramEl=document.getElementById('ram-val');
+  ramEl.textContent=ramPct+'%';ramEl.className='card-value '+vc(ramPct);
+  document.getElementById('ram-sub').textContent=(d.ram?.usedGB??'---')+' / '+(d.ram?.totalGB??'---')+' GB';
+  setGauge('ram-bar',ramPct);
+
+  const cDrive=(d.discos||[]).find(x=>x.drive==='C:')||(d.discos||[])[0];
+  if(cDrive){
+    const diskEl=document.getElementById('disk-val');
+    diskEl.textContent=cDrive.usedPct+'%';diskEl.className='card-value '+vc(cDrive.usedPct);
+    document.getElementById('disk-sub').textContent=cDrive.usedGB+' / '+cDrive.totalGB+' GB ('+cDrive.drive+')';
+    setGauge('disk-bar',cDrive.usedPct);
   }
 
-  // Histórico
-  const ts = new Date().toLocaleTimeString('pt-PT', { hour12: false });
-  alertas.forEach(a => alertHistory.unshift({ ...a, ts }));
-  if (!alertas.length) alertHistory.unshift({ tipo: 'ok', mensagem: 'Sistema OK', ts });
+  renderProcTable('proc-table-body',d.processos||[],false);
+  renderProcTable('proc-full-body',d.processos||[],true);
+  document.getElementById('proc-count').textContent=(d.processos||[]).length;
+  document.getElementById('proc-count2').textContent=(d.processos||[]).length;
 
-  const logEl = document.getElementById('alert-log');
-  const logCount = document.getElementById('alert-count');
-  const shown = alertHistory.slice(0, 50);
-  logCount.textContent = alertHistory.length;
+  renderNetTraffic('net-table-body',d.rede||[]);
 
-  logEl.innerHTML = shown.map(a => `
-    <div class="alert-item ${a.tipo}" style="margin-bottom:.4rem">
-      <span style="color:var(--text-dim);min-width:5rem">${a.ts}</span>
-      ${a.mensagem}
-    </div>
-  `).join('');
+  const ac=document.getElementById('alert-container');
+  const alertas=d.alertas||[];
+  if(!alertas.length){
+    ac.innerHTML='<div class="alert-item ok">&#10003; Sistema operacional - sem alertas ativos</div>';
+  }else{
+    ac.innerHTML=alertas.map(a=>'<div class="alert-item '+a.tipo+'">&#9888; '+a.mensagem+'</div>').join('');
+  }
 }
 
-// ══════════════════════════════════════════════════
-//  REFRESH PROGRESS BAR
-// ══════════════════════════════════════════════════
-function animateRefreshBar() {
-  const bar = document.getElementById('refresh-bar');
-  bar.style.transition = 'none';
-  bar.style.width = '0%';
-  setTimeout(() => {
-    bar.style.transition = `width ${REFRESH_MS}ms linear`;
-    bar.style.width = '100%';
-  }, 50);
+function renderProcTable(id,procs,full){
+  const tb=document.getElementById(id);if(!tb)return;
+  if(!procs.length){tb.innerHTML='<tr><td colspan="5" class="empty">Sem dados</td></tr>';return;}
+  const show=full?procs:procs.slice(0,10);
+  tb.innerHTML=show.map(p=>'<tr><td>'+p.name+'</td><td style="color:var(--text-dim)">'+p.pid+'</td><td>'+p.cpuSec+'</td><td>'+p.ramMB+'</td>'+(full?'<td><span class="tag tag-ok">'+p.status+'</span></td>':'')+'</tr>').join('');
 }
 
-// ══════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════
+function renderNetTraffic(id,rede){
+  const tb=document.getElementById(id);if(!tb)return;
+  if(!rede.length){tb.innerHTML='<tr><td colspan="3" class="empty">Sem dados</td></tr>';return;}
+  tb.innerHTML=rede.map(r=>'<tr><td>'+r.adapter+'</td><td style="color:var(--accent2)">&darr; '+r.bytesInKB+'</td><td style="color:var(--warn)">&uarr; '+r.bytesOutKB+'</td></tr>').join('');
+}
+
+// ═══════════════════════════════════════
+// FETCH & RENDER - USERS
+// ═══════════════════════════════════════
+async function fetchUsers(){
+  const d=await fetchJSON(API.users);if(!d)return;
+  document.getElementById('users-total').textContent=d.totalUsers||0;
+  document.getElementById('users-ativos').textContent=d.ativos||0;
+  document.getElementById('users-inativos').textContent=d.inativos||0;
+  document.getElementById('users-grupos').textContent=d.totalGroups||0;
+
+  const ut=document.getElementById('users-table');
+  const users=d.users||[];
+  if(!users.length){ut.innerHTML='<tr><td colspan="4" class="empty">Sem utilizadores</td></tr>';}
+  else{ut.innerHTML=users.map(u=>'<tr><td>'+u.username+'</td><td>'+safe(u.nome)+'</td><td>'+(u.ativo?'<span class="tag tag-ok">Ativo</span>':'<span class="tag tag-danger">Inativo</span>')+'</td><td style="color:var(--text-dim)">'+safe(u.ultimoLogin)+'</td></tr>').join('');}
+
+  const gt=document.getElementById('groups-table');
+  const groups=d.groups||[];
+  if(!groups.length){gt.innerHTML='<tr><td colspan="3" class="empty">Sem grupos</td></tr>';}
+  else{gt.innerHTML=groups.map(g=>'<tr><td>'+g.nome+'</td><td>'+g.membros+'</td><td style="color:var(--text-dim)">'+safe(g.descricao)+'</td></tr>').join('');}
+}
+
+// ═══════════════════════════════════════
+// FETCH & RENDER - FILESYSTEM
+// ═══════════════════════════════════════
+async function fetchFilesystem(){
+  const d=await fetchJSON(API.filesystem);if(!d)return;
+
+  const dc=document.getElementById('disco-cards');
+  const discos=d.discos||[];
+  dc.innerHTML=discos.map(dd=>'<div class="card"><div class="card-label">Disco '+dd.drive+'</div><div class="card-value '+vc(dd.usedPct)+'">'+dd.usedPct+'%</div><div class="card-sub">'+dd.usedGB+' / '+dd.totalGB+' GB</div><div class="gauge-wrap"><div class="gauge-bg"><div class="gauge-fill '+gc(dd.usedPct)+'" style="width:'+dd.usedPct+'%"></div></div></div><div class="card-sub" style="margin-top:.5rem">Livre: '+dd.freeGB+' GB</div></div>').join('');
+
+  document.getElementById('fs-grandes-count').textContent=d.totalGrandes||0;
+  const gt=document.getElementById('fs-grandes-table');
+  const grandes=d.ficheirosGrandes||[];
+  if(!grandes.length){gt.innerHTML='<tr><td colspan="3" class="empty">Nenhum ficheiro grande</td></tr>';}
+  else{gt.innerHTML=grandes.map(f=>'<tr><td>'+f.nome+'</td><td>'+f.sizeMB+'</td><td style="color:var(--text-dim)">'+f.alterado+'</td></tr>').join('');}
+
+  document.getElementById('fs-susp-count').textContent=d.totalSuspeitos||0;
+  const st=document.getElementById('fs-susp-table');
+  const susp=d.suspeitos||[];
+  if(!susp.length){st.innerHTML='<tr><td colspan="4" class="empty">Nenhum ficheiro suspeito</td></tr>';}
+  else{st.innerHTML=susp.map(f=>'<tr><td>'+f.nome+'</td><td><span class="tag tag-warn">'+f.ext+'</span></td><td>'+f.sizeMB+'</td><td style="color:var(--text-dim)">'+f.alterado+'</td></tr>').join('');}
+
+  const sht=document.getElementById('shares-table');
+  const shares=d.shares||[];
+  if(!shares.length){sht.innerHTML='<tr><td colspan="3" class="empty">Sem pastas partilhadas</td></tr>';}
+  else{sht.innerHTML=shares.map(s=>'<tr><td>'+s.nome+'</td><td style="color:var(--text-dim)">'+s.caminho+'</td><td>'+safe(s.desc)+'</td></tr>').join('');}
+}
+
+// ═══════════════════════════════════════
+// FETCH & RENDER - SERVICES
+// ═══════════════════════════════════════
+async function fetchServices(){
+  const d=await fetchJSON(API.services);if(!d)return;
+  document.getElementById('svc-ativos').textContent=d.totalAtivos||0;
+  document.getElementById('svc-parados').textContent=d.totalParados||0;
+  document.getElementById('svc-crit-down').textContent=d.criticosDown||0;
+  const critDown=d.criticosDown||0;
+  document.getElementById('svc-crit-down').className='card-value '+(critDown>0?'danger':'ok');
+  document.getElementById('svc-roles').textContent=(d.roles||[]).length;
+
+  const ct=document.getElementById('svc-criticos-table');
+  const criticos=d.criticos||[];
+  if(!criticos.length){ct.innerHTML='<tr><td colspan="4" class="empty">Sem dados</td></tr>';}
+  else{ct.innerHTML=criticos.map(s=>'<tr><td>'+s.servico+'</td><td>'+s.nome+'</td><td>'+tagFor(s.estado)+'</td><td style="color:var(--text-dim)">'+s.startup+'</td></tr>').join('');}
+
+  const pt=document.getElementById('svc-parados-table');
+  const parados=d.parados||[];
+  if(!parados.length){pt.innerHTML='<tr><td colspan="3" class="empty">Nenhum servico automatico parado</td></tr>';}
+  else{pt.innerHTML=parados.map(s=>'<tr><td>'+s.servico+'</td><td>'+s.nome+'</td><td>'+tagFor(s.estado)+'</td></tr>').join('');}
+}
+
+// ═══════════════════════════════════════
+// FETCH & RENDER - NETWORK
+// ═══════════════════════════════════════
+async function fetchNetwork(){
+  const d=await fetchJSON(API.network);if(!d)return;
+  document.getElementById('net-portas').textContent=d.totalPortas||0;
+  document.getElementById('net-conex').textContent=d.totalConex||0;
+
+  const pings=d.ping||[];
+  const allOk=pings.every(p=>p.alcancavel);
+  document.getElementById('net-ping-status').textContent=allOk?'OK':'FALHAS';
+  document.getElementById('net-ping-status').className='card-value '+(allOk?'ok':'danger');
+
+  const it=document.getElementById('net-iface-table');
+  const ifaces=d.interfaces||[];
+  if(!ifaces.length){it.innerHTML='<tr><td colspan="4" class="empty">Sem dados</td></tr>';}
+  else{it.innerHTML=ifaces.map(i=>'<tr><td>'+i.nome+'</td><td>'+safe(i.ip)+'</td><td style="color:var(--text-dim)">'+safe(i.mac)+'</td><td><span class="tag tag-ok">'+i.estado+'</span></td></tr>').join('');}
+
+  const pt=document.getElementById('net-portas-table');
+  const portas=d.portas||[];
+  if(!portas.length){pt.innerHTML='<tr><td colspan="3" class="empty">Sem dados</td></tr>';}
+  else{pt.innerHTML=portas.map(p=>'<tr><td>'+p.porta+'</td><td>'+p.processo+'</td><td style="color:var(--text-dim)">'+p.pid+'</td></tr>').join('');}
+
+  const ct=document.getElementById('net-conex-table');
+  const conex=d.conexoes||[];
+  if(!conex.length){ct.innerHTML='<tr><td colspan="4" class="empty">Sem conexoes</td></tr>';}
+  else{ct.innerHTML=conex.map(c=>'<tr><td>'+c.localPort+'</td><td>'+c.remoteAddr+'</td><td>'+c.remotePort+'</td><td>'+c.processo+'</td></tr>').join('');}
+}
+
+// ═══════════════════════════════════════
+// FETCH & RENDER - SECURITY
+// ═══════════════════════════════════════
+async function fetchSecurity(){
+  const d=await fetchJSON(API.security);if(!d)return;
+  const tf=d.totalFalhados||0;
+  document.getElementById('sec-falhados').textContent=tf;
+  document.getElementById('sec-falhados').parentElement.querySelector('.card-value').className='card-value '+(tf>10?'danger':tf>3?'warn':'ok');
+  document.getElementById('sec-sucesso').textContent=d.totalSucesso||0;
+  document.getElementById('sec-bloqueadas').textContent=(d.contasBloqueadas||[]).length;
+  document.getElementById('sec-bloqueadas').parentElement.querySelector('.card-value').className='card-value '+((d.contasBloqueadas||[]).length>0?'danger':'ok');
+
+  const fw=d.firewall||[];
+  const fwAtivos=fw.filter(f=>f.ativo).length;
+  document.getElementById('sec-firewall').textContent=fwAtivos+'/'+fw.length;
+
+  const sa=document.getElementById('sec-alertas');
+  const alertas=d.alertas||[];
+  if(alertas.length){sa.innerHTML=alertas.map(a=>'<div class="alert-item '+a.tipo+'">&#9888; '+a.mensagem+'</div>').join('');}
+  else{sa.innerHTML='';}
+
+  const ft=document.getElementById('sec-falhados-table');
+  const falhados=d.loginsFalhados||[];
+  if(!falhados.length){ft.innerHTML='<tr><td colspan="3" class="empty">Sem logins falhados</td></tr>';}
+  else{ft.innerHTML=falhados.map(l=>'<tr><td>'+l.timestamp+'</td><td>'+l.utilizador+'</td><td>'+l.origemIP+'</td></tr>').join('');}
+
+  const st=document.getElementById('sec-sucesso-table');
+  const sucesso=d.loginsSucesso||[];
+  if(!sucesso.length){st.innerHTML='<tr><td colspan="3" class="empty">Sem dados</td></tr>';}
+  else{st.innerHTML=sucesso.map(l=>'<tr><td>'+l.timestamp+'</td><td>'+l.utilizador+'</td><td><span class="tag tag-dim">'+l.tipo+'</span></td></tr>').join('');}
+
+  const fd=document.getElementById('sec-firewall-detail');
+  if(!fw.length){fd.innerHTML='<div class="empty">Sem dados</div>';}
+  else{fd.innerHTML=fw.map(f=>'<div class="stat-row"><span class="stat-label">'+f.perfil+'</span><span class="stat-value">'+(f.ativo?'<span class="tag tag-ok">Ativo</span>':'<span class="tag tag-danger">Inativo</span>')+'</span></div>').join('');}
+}
+
+// ═══════════════════════════════════════
+// FETCH & RENDER - BACKUP
+// ═══════════════════════════════════════
+async function fetchBackup(){
+  const d=await fetchJSON(API.backup);if(!d)return;
+  document.getElementById('bkp-total').textContent=d.totalBackups||0;
+  document.getElementById('bkp-size').textContent=(d.totalSizeMB||0)+' MB';
+  document.getElementById('bkp-ultimo').textContent=safe(d.ultimoBackup);
+  document.getElementById('bkp-agendados').textContent=(d.agendados||[]).length;
+
+  const bt=document.getElementById('bkp-table');
+  const backups=d.backups||[];
+  if(!backups.length){bt.innerHTML='<tr><td colspan="4" class="empty">Sem backups</td></tr>';}
+  else{bt.innerHTML=backups.map(b=>'<tr><td>'+b.nome+'</td><td><span class="tag tag-dim">'+b.tipo+'</span></td><td>'+b.sizeMB+'</td><td style="color:var(--text-dim)">'+b.data+'</td></tr>').join('');}
+
+  const at=document.getElementById('bkp-agenda-table');
+  const agendados=d.agendados||[];
+  if(!agendados.length){at.innerHTML='<tr><td colspan="4" class="empty">Sem tarefas agendadas</td></tr>';}
+  else{at.innerHTML=agendados.map(a=>'<tr><td>'+a.nome+'</td><td>'+tagFor(a.estado==='Ready'?'Running':a.estado)+'</td><td style="color:var(--text-dim)">'+a.ultimaExec+'</td><td>'+a.resultado+'</td></tr>').join('');}
+}
+
+// ═══════════════════════════════════════
+// REFRESH LOGIC
+// ═══════════════════════════════════════
+function animateRefreshBar(){
+  const b=document.getElementById('refresh-bar');
+  b.style.transition='none';b.style.width='0%';
+  setTimeout(()=>{b.style.transition='width '+REFRESH_MS+'ms linear';b.style.width='100%';},50);
+}
+
+async function refreshCurrentTab(){
+  switch(currentTab){
+    case 'overview': case 'processos': await fetchStats();break;
+    case 'utilizadores': await fetchUsers();break;
+    case 'ficheiros': await fetchFilesystem();break;
+    case 'servicos': await fetchServices();break;
+    case 'rede': await fetchNetwork();break;
+    case 'seguranca': await fetchSecurity();break;
+    case 'backup': await fetchBackup();break;
+  }
+}
+
+// Initial load
 fetchStats();
-setInterval(fetchStats, REFRESH_MS);
+setInterval(()=>{
+  if(currentTab==='overview'||currentTab==='processos')fetchStats();
+  else refreshCurrentTab();
+},REFRESH_MS);
 </script>
 </body>
 </html>

@@ -4,7 +4,6 @@
 #
 # NOTA: A pasta base e detetada automaticamente a partir da
 # localizacao deste script (raiz do repositorio clonado).
-# Ex: git clone <url> C:\TiagoCostaProjeto0925
 
 $base = Split-Path -Parent $MyInvocation.MyCommand.Path
 Write-Host "Pasta base do projeto: $base" -ForegroundColor Cyan
@@ -21,7 +20,7 @@ $pastas = @(
     "$base\dashboard",
     "$base\logs",
     "$base\reports",
-    "$base\iis-api"
+    "$base\backups"
 )
 
 foreach ($pasta in $pastas) {

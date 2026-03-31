@@ -51,7 +51,6 @@ function Prompt-SimNao {
 Write-Host "-- Configuracao do Site IIS --" -ForegroundColor White
 $NomeSite       = Prompt-Value -Mensagem "Nome do site IIS"               -Sugestao "SistemaAdmin"
 $PortaDashboard = Prompt-Int   -Mensagem "Porta do Dashboard (HTTP)"      -Sugestao "80"   -Min 1 -Max 65535
-$PortaAPI       = Prompt-Int   -Mensagem "Porta da API PowerShell"        -Sugestao "8080" -Min 1 -Max 65535
 
 Write-Host ""
 Write-Host "-- Caminhos no Servidor --" -ForegroundColor White
@@ -64,7 +63,6 @@ Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "  RESUMO DAS OPCOES:" -ForegroundColor White
 Write-Host "  Nome do site    : $NomeSite"
 Write-Host "  Porta Dashboard : $PortaDashboard"
-Write-Host "  Porta API       : $PortaAPI"
 Write-Host "  Pasta base      : $BaseDir"
 Write-Host "  Pasta dashboard : $DashboardPath"
 Write-Host "  Pasta API       : $ApiPath"
@@ -79,12 +77,16 @@ if (-not $confirma) {
 
 Write-Host ""
 
+# Detetar o caminho REAL do powershell.exe (pode ser C:\Windows ou C:\WINDOWS)
+$psExe = (Get-Command powershell.exe).Source
+Write-Host "  PowerShell detetado em: $psExe" -ForegroundColor Gray
+$appcmd = "$env:SystemRoot\system32\inetsrv\appcmd.exe"
+
 # 1. VERIFICAR IIS
 Write-Host "[1/6] A verificar se o IIS esta instalado..." -ForegroundColor Yellow
 $iis = Get-WindowsFeature -Name Web-Server
 if (-not $iis.Installed) {
     Write-Host "[ERRO] IIS nao esta instalado!" -ForegroundColor Red
-    Write-Host "       Executa primeiro o Setup-Server.ps1 com IIS = S" -ForegroundColor Red
     exit 1
 }
 Write-Host "[OK] IIS instalado." -ForegroundColor Green
@@ -130,22 +132,28 @@ Write-Host "[OK] Virtual directory /api criada" -ForegroundColor Green
 # 5. REGISTAR POWERSHELL COMO CGI
 Write-Host ""
 Write-Host "[5/6] A registar PowerShell como CGI handler..." -ForegroundColor Yellow
-$psPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
 
-# Desbloquear a seccao handlers a nivel do servidor (necessario para permitir override)
-Write-Host "       A desbloquear seccao handlers..." -ForegroundColor Gray
-& "$env:SystemRoot\system32\inetsrv\appcmd.exe" unlock config -section:system.webServer/handlers | Out-Null
+# Desbloquear seccao handlers
+& $appcmd unlock config -section:system.webServer/handlers | Out-Null
+Write-Host "       Seccao handlers desbloqueada." -ForegroundColor Gray
 
-# Registar o handler PowerShell na aplicacao /api
-Add-WebConfiguration -Filter "system.webServer/handlers" -PSPath "IIS:\Sites\$NomeSite\api" -Value @{
-    name            = "PowerShellHandler"
-    path            = "*.ps1"
-    verb            = "GET,POST"
-    modules         = "CgiModule"
-    scriptProcessor = "$psPath -NoProfile -NonInteractive -File ""%s"" %s"
-    resourceType    = "File"
-}
-Write-Host "[OK] Handler PowerShell registado." -ForegroundColor Green
+# Limpar restriction list antiga e adicionar com caminho correto
+& $appcmd set config -section:system.webServer/security/isapiCgiRestriction /-".[path='C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe']" 2>$null
+& $appcmd set config -section:system.webServer/security/isapiCgiRestriction /-".[path='C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe']" 2>$null
+& $appcmd set config -section:system.webServer/security/isapiCgiRestriction /-".[path='$psExe']" 2>$null
+
+# Adicionar com o caminho real detetado
+& $appcmd set config -section:system.webServer/security/isapiCgiRestriction /+".[path='$psExe',allowed='True',description='PowerShell CGI']"
+Write-Host "       PowerShell adicionado a restriction list: $psExe" -ForegroundColor Gray
+
+# Limpar handlers antigos de .ps1
+& $appcmd set config -section:system.webServer/handlers /-".[name='PowerShellCGI']" 2>$null
+& $appcmd set config -section:system.webServer/handlers /-".[name='PowerShellHandler']" 2>$null
+
+# Registar handler global com o caminho real
+$scriptProcessor = "$psExe -NoProfile -NonInteractive -File ""%s"" %s"
+& $appcmd set config -section:system.webServer/handlers /+".[name='PowerShellCGI',path='*.ps1',verb='GET,POST',modules='CgiModule',scriptProcessor='$scriptProcessor',resourceType='File']"
+Write-Host "[OK] Handler PowerShell registado com: $psExe" -ForegroundColor Green
 
 # 6. PERMISSOES
 Write-Host ""
@@ -165,19 +173,32 @@ $acl2.SetAccessRule($rule2)
 Set-Acl $logPath $acl2
 Write-Host "[OK] IIS_IUSRS com Modify em $logPath" -ForegroundColor Green
 
-# WRAPPER STATS
+# WRAPPER STATS - usando sintaxe CGI correta
 Write-Host ""
 Write-Host "  A criar wrapper stats.ps1..." -ForegroundColor Gray
-$wrapperContent = "Write-Output ""Content-Type: application/json""`r`nWrite-Output ""Access-Control-Allow-Origin: *""`r`nWrite-Output """"`r`n& ""$BaseDir\scripts\monitoring\Get-SystemStats.ps1"""
-Set-Content -Path "$ApiPath\stats.ps1" -Value $wrapperContent -Encoding UTF8
+
+$statsScript = "$BaseDir\scripts\monitoring\Get-SystemStats.ps1"
+$wrapperLines = @(
+    '# stats.ps1 - wrapper CGI para Get-SystemStats',
+    '# O IIS requer que os headers HTTP sejam escritos primeiro via Write-Host',
+    '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
+    'Write-Host "Content-Type: application/json"',
+    'Write-Host "Access-Control-Allow-Origin: *"',
+    'Write-Host ""',
+    "& `"$statsScript`""
+)
+$wrapperLines | Set-Content -Path "$ApiPath\stats.ps1" -Encoding UTF8
 Write-Host "[OK] Wrapper stats.ps1 criado." -ForegroundColor Green
 
 # REINICIAR IIS
 iisreset /noforce | Out-Null
+Write-Host "[OK] IIS reiniciado." -ForegroundColor Green
 
 # LOG
 $logEntry = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Setup-IIS.ps1 concluido. Site: $NomeSite | Porta: $PortaDashboard"
-Add-Content -Path "$BaseDir\logs\setup.log" -Value $logEntry
+$logFile = "$BaseDir\logs\setup.log"
+if (-not (Test-Path (Split-Path $logFile))) { New-Item -ItemType Directory -Path (Split-Path $logFile) -Force | Out-Null }
+Add-Content -Path $logFile -Value $logEntry
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
@@ -185,4 +206,6 @@ Write-Host "  IIS CONFIGURADO COM SUCESSO!" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Dashboard : http://localhost:$PortaDashboard" -ForegroundColor White
 Write-Host "  API Stats : http://localhost:$PortaDashboard/api/stats.ps1" -ForegroundColor White
+Write-Host ""
+Write-Host "  Verifica a API no browser para confirmar que retorna JSON." -ForegroundColor Gray
 Write-Host "============================================" -ForegroundColor Cyan

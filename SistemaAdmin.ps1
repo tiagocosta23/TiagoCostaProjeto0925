@@ -5,7 +5,13 @@
 # ==============================================================
 
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$DataRoot    = "C:\SysAdmin"
 $Host.UI.RawUI.WindowTitle = "SistemaAdmin - Painel de Administracao"
+
+# Garantir que as pastas de dados existem
+@("$DataRoot\logs", "$DataRoot\reports", "$DataRoot\backups") | ForEach-Object {
+    if (-not (Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
+}
 
 function Show-Banner {
     Clear-Host
@@ -91,7 +97,7 @@ function Menu-Monitorizacao {
                 Pause-Menu
             }
             "3" {
-                $reportDir = "$ProjectRoot\reports"
+                $reportDir = "$DataRoot\reports"
                 if (-not (Test-Path $reportDir)) { New-Item -ItemType Directory -Path $reportDir -Force | Out-Null }
                 $reportFile = "$reportDir\recursos-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
                 & "$ProjectRoot\scripts\monitoring\Get-SystemStats.ps1" | Out-File $reportFile -Encoding UTF8

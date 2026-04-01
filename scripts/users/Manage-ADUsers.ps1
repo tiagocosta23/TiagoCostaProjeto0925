@@ -19,8 +19,8 @@ param(
 $ErrorActionPreference = "SilentlyContinue"
 Import-Module ActiveDirectory -ErrorAction SilentlyContinue
 
-$ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
-$LogFile = "$ProjectRoot\logs\users.log"
+$DataRoot = "C:\SysAdmin"
+$LogFile  = "$DataRoot\logs\users.log"
 
 function Write-Log {
     param([string]$Msg)
@@ -35,7 +35,7 @@ if ($Acao -eq "json") {
     $groups = @()
 
     try {
-        $users = Get-ADUser -Filter * -Properties DisplayName, SamAccountName, Enabled, LastLogonDate, MemberOf, WhenCreated |
+        $users = @(Get-ADUser -Filter * -Properties DisplayName, SamAccountName, Enabled, LastLogonDate, MemberOf, WhenCreated |
             Select-Object -First 50 | ForEach-Object {
                 @{
                     nome        = if ($_.DisplayName) { $_.DisplayName } else { $_.SamAccountName }
@@ -45,16 +45,16 @@ if ($Acao -eq "json") {
                     criadoEm    = if ($_.WhenCreated) { $_.WhenCreated.ToString("yyyy-MM-dd") } else { "" }
                     grupos      = ($_.MemberOf | ForEach-Object { ($_ -split ',')[0] -replace 'CN=','' }) -join ', '
                 }
-            }
+            })
 
-        $groups = Get-ADGroup -Filter * -Properties Members, Description |
+        $groups = @(Get-ADGroup -Filter * -Properties Members, Description |
             Select-Object -First 30 | ForEach-Object {
                 @{
                     nome      = $_.Name
                     descricao = if ($_.Description) { $_.Description } else { "" }
                     membros   = ($_.Members | Measure-Object).Count
                 }
-            }
+            })
     } catch {}
 
     $resultado = @{
@@ -173,7 +173,7 @@ function Listar-Grupos {
 }
 
 function Gerar-Relatorio {
-    $reportDir = "$ProjectRoot\reports"
+    $reportDir = "$DataRoot\reports"
     if (-not (Test-Path $reportDir)) { New-Item -ItemType Directory -Path $reportDir -Force | Out-Null }
     $reportFile = "$reportDir\relatorio-users-$(Get-Date -Format 'yyyyMMdd-HHmmss').txt"
 

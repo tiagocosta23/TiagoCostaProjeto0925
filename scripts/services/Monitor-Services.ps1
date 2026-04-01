@@ -13,8 +13,8 @@ param(
 )
 
 $ErrorActionPreference = "SilentlyContinue"
-$ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
-$LogFile = "$ProjectRoot\logs\services.log"
+$DataRoot = "C:\SysAdmin"
+$LogFile  = "$DataRoot\logs\services.log"
 
 # Servicos criticos a monitorizar
 $ServicosCriticos = @(
@@ -55,7 +55,7 @@ if ($Acao -eq "json") {
     }
 
     # Servicos parados que deviam estar a correr
-    $parados = Get-Service | Where-Object {
+    $parados = @(Get-Service | Where-Object {
         $_.StartType -eq 'Automatic' -and $_.Status -ne 'Running'
     } | Select-Object -First 15 | ForEach-Object {
         @{
@@ -64,19 +64,19 @@ if ($Acao -eq "json") {
             estado  = $_.Status.ToString()
             startup = $_.StartType.ToString()
         }
-    }
+    })
 
     # Roles Windows instaladas
     $roles = @()
     try {
-        $roles = Get-WindowsFeature | Where-Object { $_.Installed } |
+        $roles = @(Get-WindowsFeature | Where-Object { $_.Installed } |
             Select-Object -First 20 | ForEach-Object {
                 @{
                     nome   = $_.DisplayName
                     feat   = $_.Name
                     tipo   = $_.FeatureType.ToString()
                 }
-            }
+            })
     } catch {}
 
     $totalAtivos  = (Get-Service | Where-Object { $_.Status -eq 'Running' } | Measure-Object).Count

@@ -13,8 +13,9 @@ param(
 )
 
 $ErrorActionPreference = "SilentlyContinue"
+$DataRoot = "C:\SysAdmin"
+$LogFile  = "$DataRoot\logs\security.log"
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
-$LogFile = "$ProjectRoot\logs\security.log"
 
 function Write-Log {
     param([string]$Msg)
@@ -71,11 +72,11 @@ if ($Acao -eq "json") {
                 }
             }
         }
-        $loginsSucesso = $loginsSucesso | Select-Object -First 15
+        $loginsSucesso = @($loginsSucesso | Select-Object -First 15)
     } catch {}
 
     # Portas abertas com processos
-    $portasAbertas = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+    $portasAbertas = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
         Sort-Object LocalPort | Select-Object -First 20 | ForEach-Object {
             $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue
             @{
@@ -83,7 +84,7 @@ if ($Acao -eq "json") {
                 processo = if ($proc) { $proc.ProcessName } else { "N/A" }
                 pid      = $_.OwningProcess
             }
-        }
+        })
 
     # Estado do Firewall
     $firewallStatus = @()
@@ -111,9 +112,9 @@ if ($Acao -eq "json") {
     $contasBloqueadas = @()
     try {
         Import-Module ActiveDirectory -ErrorAction SilentlyContinue
-        $contasBloqueadas = Search-ADAccount -LockedOut -ErrorAction SilentlyContinue | ForEach-Object {
+        $contasBloqueadas = @(Search-ADAccount -LockedOut -ErrorAction SilentlyContinue | ForEach-Object {
             @{ username = $_.SamAccountName; nome = $_.Name }
-        }
+        })
         if (($contasBloqueadas | Measure-Object).Count -gt 0) {
             $alertas += @{ tipo = "warning"; mensagem = "$(($contasBloqueadas | Measure-Object).Count) conta(s) bloqueada(s) no AD" }
         }

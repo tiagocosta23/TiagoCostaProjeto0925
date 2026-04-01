@@ -4,6 +4,7 @@
 # O servidor vai REINICIAR automaticamente no final
 
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$DataRoot    = "C:\SysAdmin"
 
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "  SETUP AD DS - PASSO 2/2" -ForegroundColor Cyan
@@ -125,7 +126,7 @@ Install-ADDSForest `
 # 3. LOG
 Write-Host ""
 Write-Host "[3/3] A guardar log..." -ForegroundColor Yellow
-$logDir = "$ProjectRoot\logs"
+$logDir = "$DataRoot\logs"
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 $logEntry = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Setup-ADDomain.ps1 concluido. Dominio: $DomainName"
 Add-Content -Path "$logDir\setup.log" -Value $logEntry

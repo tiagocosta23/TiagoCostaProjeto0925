@@ -1,0 +1,8 @@
+# Dados operacionais (ficam em C:\SysAdmin, nao no repo)
+logs/
+reports/
+backups/
+
+# Temporarios
+*.tmp
+*.log

@@ -16,7 +16,6 @@ $ramUsed   = [math]::Round($ramTotal - $ramFree, 2)
 $ramPct    = [math]::Round(($ramUsed / $ramTotal) * 100, 1)
 
 # --- Disco (todos os volumes fixos) ---
-# CORRECAO: Forcar a saida a ser sempre uma lista/array usando @( )
 $discos = @(Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" | ForEach-Object {
     $total = [math]::Round($_.Size / 1GB, 2)
     $free  = [math]::Round($_.FreeSpace / 1GB, 2)
@@ -34,7 +33,6 @@ $discos = @(Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" |
 # --- Rede (adaptadores ativos) ---
 $netStats = @()
 try {
-    # CORRECAO: Forcar lista
     $netStats = @(Get-CimInstance -ClassName Win32_PerfFormattedData_Tcpip_NetworkInterface -ErrorAction SilentlyContinue |
         Where-Object { $_.BytesTotalPersec -gt 0 } |
         ForEach-Object {
@@ -47,7 +45,6 @@ try {
 } catch { $netStats = @() }
 
 # --- Processos top 15 por CPU ---
-# CORRECAO: Forcar lista
 $processos = @(Get-Process | Sort-Object CPU -Descending | Select-Object -First 15 | ForEach-Object {
     @{
         name    = $_.ProcessName

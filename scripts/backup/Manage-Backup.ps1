@@ -15,10 +15,13 @@ param(
 )
 
 $ErrorActionPreference = "SilentlyContinue"
-$ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
-$LogFile = "$ProjectRoot\logs\backup.log"
-$BackupDir = if ($Destino) { $Destino } else { "$ProjectRoot\backups" }
+$DataRoot    = "C:\SysAdmin"
+$LogFile     = "$DataRoot\logs\backup.log"
+$BackupDir   = if ($Destino) { $Destino } else { "$DataRoot\backups" }
 $BackupIndex = "$BackupDir\backup-index.json"
+
+# Para o agendamento, precisamos saber onde esta o script
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
 
 function Write-Log {
     param([string]$Msg)

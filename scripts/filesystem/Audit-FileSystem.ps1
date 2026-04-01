@@ -15,8 +15,8 @@ param(
 )
 
 $ErrorActionPreference = "SilentlyContinue"
-$ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
-$LogFile = "$ProjectRoot\logs\filesystem.log"
+$DataRoot = "C:\SysAdmin"
+$LogFile  = "$DataRoot\logs\filesystem.log"
 
 function Write-Log {
     param([string]$Msg)
@@ -26,71 +26,85 @@ function Write-Log {
 }
 
 # ── Modo JSON (para a API do Dashboard) ──
+# NOTA: Este modo tem de ser RAPIDO (<10s) para nao dar timeout no Pode.
+# Por isso NAO fazemos scan recursivo do C:\ inteiro.
 if ($Acao -eq "json") {
     # Discos
-    $discos = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" | ForEach-Object {
+    $discos = @(Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" | ForEach-Object {
         $total = [math]::Round($_.Size / 1GB, 2)
         $free  = [math]::Round($_.FreeSpace / 1GB, 2)
         $used  = [math]::Round($total - $free, 2)
         $pct   = if ($total -gt 0) { [math]::Round(($used / $total) * 100, 1) } else { 0 }
         @{ drive = $_.DeviceID; totalGB = $total; usedGB = $used; freeGB = $free; usedPct = $pct }
-    }
+    })
 
-    # Top 10 ficheiros grandes no C:
+    # Top ficheiros grandes - so em pastas especificas, com profundidade limitada
     $grandes = @()
     try {
-        $grandes = Get-ChildItem -Path "C:\" -Recurse -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Length -gt 50MB } |
-            Sort-Object Length -Descending |
-            Select-Object -First 10 | ForEach-Object {
-                @{
-                    nome     = $_.Name
-                    caminho  = $_.FullName
-                    sizeMB   = [math]::Round($_.Length / 1MB, 2)
-                    alterado = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
-                }
+        $pastasGrandes = @("C:\Users", "C:\Shares", "C:\inetpub", "$env:TEMP")
+        foreach ($p in $pastasGrandes) {
+            if (Test-Path $p) {
+                $grandes += @(Get-ChildItem -Path $p -Recurse -File -Depth 4 -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Length -gt 50MB } |
+                    ForEach-Object {
+                        @{
+                            nome     = $_.Name
+                            caminho  = $_.FullName
+                            sizeMB   = [math]::Round($_.Length / 1MB, 2)
+                            alterado = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
+                        }
+                    })
             }
+        }
+        $grandes = @($grandes | Sort-Object { $_.sizeMB } -Descending | Select-Object -First 10)
     } catch {}
 
-    # Ficheiros recentes (ultimas 24h)
+    # Ficheiros recentes (ultimas 24h) - so em Users e Shares
     $recentes = @()
     try {
         $limite = (Get-Date).AddHours(-24)
-        $recentes = Get-ChildItem -Path "C:\Users","C:\Shares" -Recurse -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.LastWriteTime -gt $limite } |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object -First 15 | ForEach-Object {
-                @{
-                    nome     = $_.Name
-                    caminho  = $_.FullName
-                    sizeMB   = [math]::Round($_.Length / 1MB, 2)
-                    alterado = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
-                }
+        $pastasRecentes = @("C:\Users", "C:\Shares")
+        foreach ($p in $pastasRecentes) {
+            if (Test-Path $p) {
+                $recentes += @(Get-ChildItem -Path $p -Recurse -File -Depth 4 -ErrorAction SilentlyContinue |
+                    Where-Object { $_.LastWriteTime -gt $limite } |
+                    ForEach-Object {
+                        @{
+                            nome     = $_.Name
+                            caminho  = $_.FullName
+                            sizeMB   = [math]::Round($_.Length / 1MB, 2)
+                            alterado = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
+                        }
+                    })
             }
+        }
+        $recentes = @($recentes | Sort-Object { $_.alterado } -Descending | Select-Object -First 15)
     } catch {}
 
-    # Extensoes suspeitas
+    # Extensoes suspeitas - so em Users, profundidade limitada
     $suspeitos = @()
     $extSuspeitas = @("*.exe","*.bat","*.cmd","*.vbs","*.ps1","*.scr","*.msi")
     try {
-        $suspeitos = Get-ChildItem -Path "C:\Users" -Recurse -Include $extSuspeitas -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.LastWriteTime -gt (Get-Date).AddDays(-7) } |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object -First 10 | ForEach-Object {
-                @{
-                    nome     = $_.Name
-                    caminho  = $_.FullName
-                    sizeMB   = [math]::Round($_.Length / 1MB, 2)
-                    alterado = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
-                    ext      = $_.Extension
-                }
-            }
+        if (Test-Path "C:\Users") {
+            $suspeitos = @(Get-ChildItem -Path "C:\Users" -Recurse -Include $extSuspeitas -File -Depth 4 -ErrorAction SilentlyContinue |
+                Where-Object { $_.LastWriteTime -gt (Get-Date).AddDays(-7) } |
+                Sort-Object LastWriteTime -Descending |
+                Select-Object -First 10 | ForEach-Object {
+                    @{
+                        nome     = $_.Name
+                        caminho  = $_.FullName
+                        sizeMB   = [math]::Round($_.Length / 1MB, 2)
+                        alterado = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
+                        ext      = $_.Extension
+                    }
+                })
+        }
     } catch {}
 
     # Pastas partilhadas
     $shares = @()
     try {
-        $shares = Get-SmbShare -ErrorAction SilentlyContinue |
+        $shares = @(Get-SmbShare -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -notlike '*$' } |
             ForEach-Object {
                 @{
@@ -98,25 +112,25 @@ if ($Acao -eq "json") {
                     caminho = $_.Path
                     desc    = if ($_.Description) { $_.Description } else { "" }
                 }
-            }
+            })
     } catch {}
 
     $resultado = @{
-        timestamp      = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-        discos         = $discos
+        timestamp        = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+        discos           = $discos
         ficheirosGrandes = $grandes
-        recentes       = $recentes
-        suspeitos      = $suspeitos
-        shares         = $shares
-        totalGrandes   = ($grandes | Measure-Object).Count
-        totalSuspeitos = ($suspeitos | Measure-Object).Count
+        recentes         = $recentes
+        suspeitos        = $suspeitos
+        shares           = $shares
+        totalGrandes     = ($grandes | Measure-Object).Count
+        totalSuspeitos   = ($suspeitos | Measure-Object).Count
     }
 
     $resultado | ConvertTo-Json -Depth 5
     return
 }
 
-# ── Funcoes CLI ──
+# ── Funcoes CLI (estas podem demorar mais, nao ha timeout) ──
 
 function Analisar-Espaco {
     Write-Host ""

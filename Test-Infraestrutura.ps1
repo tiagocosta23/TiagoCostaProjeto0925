@@ -3,12 +3,14 @@
 # Executar no servidor apos tudo configurado
 
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$DataRoot    = "C:\SysAdmin"
 
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "  TESTE DE INFRAESTRUTURA" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Pasta do projeto: $ProjectRoot" -ForegroundColor Gray
+Write-Host "  Pasta de dados:   $DataRoot" -ForegroundColor Gray
 Write-Host "  Preenche as opcoes abaixo." -ForegroundColor Gray
 Write-Host "  Prime ENTER para aceitar o valor sugerido." -ForegroundColor Gray
 Write-Host ""
@@ -81,8 +83,6 @@ $roles = @{
     "AD-Domain-Services" = "Active Directory Domain Services"
     "DNS"                = "DNS Server"
     "FS-FileServer"      = "File Server"
-    "Web-Server"         = "IIS"
-    "Web-CGI"            = "IIS CGI"
 }
 
 foreach ($role in $roles.Keys) {
@@ -99,7 +99,6 @@ $servicos = @{
     "ADWS"     = "Active Directory Web Services"
     "DNS"      = "DNS Server"
     "Netlogon" = "Net Logon"
-    "W3SVC"    = "IIS (World Wide Web)"
 }
 
 foreach ($svc in $servicos.Keys) {
@@ -118,7 +117,16 @@ try {
     if ($resp.StatusCode -eq 200) { Test-OK "Dashboard acessivel em http://localhost" }
     else                          { Test-ERR "Dashboard retornou HTTP $($resp.StatusCode)" }
 } catch {
-    Test-WARN "Dashboard nao acessivel - IIS pode nao estar configurado ainda"
+    Test-WARN "Dashboard nao acessivel - o servidor Pode pode nao estar a correr"
+}
+
+# 6. PASTAS DE DADOS
+Write-Host ""
+Write-Host "[6] Pastas de Dados ($DataRoot)" -ForegroundColor White
+
+foreach ($pasta in @("$DataRoot\logs", "$DataRoot\reports", "$DataRoot\backups")) {
+    if (Test-Path $pasta) { Test-OK  "Pasta existe: $pasta" }
+    else                  { Test-WARN "Pasta nao existe: $pasta (sera criada automaticamente)" }
 }
 
 # RESULTADO
@@ -133,7 +141,7 @@ if ($erros -eq 0) {
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
-$logDir = "$ProjectRoot\logs"
+$logDir = "$DataRoot\logs"
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 $logEntry = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Test-Infraestrutura: $erros erros encontrados"
 Add-Content -Path "$logDir\setup.log" -Value $logEntry

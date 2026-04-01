@@ -12,8 +12,8 @@ param(
 )
 
 $ErrorActionPreference = "SilentlyContinue"
-$ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
-$LogFile = "$ProjectRoot\logs\network.log"
+$DataRoot = "C:\SysAdmin"
+$LogFile  = "$DataRoot\logs\network.log"
 
 function Write-Log {
     param([string]$Msg)
@@ -23,24 +23,27 @@ function Write-Log {
 }
 
 # ── Modo JSON (para a API do Dashboard) ──
+# NOTA: Tem de ser rapido (<10s) para nao dar timeout no Pode.
 if ($Acao -eq "json") {
     # Interfaces de rede
-    $interfaces = Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | ForEach-Object {
+    $interfaces = @(Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | ForEach-Object {
         $ip = Get-NetIPAddress -InterfaceIndex $_.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue
+        $speedText = $_.LinkSpeed
+        if (-not $speedText) { $speedText = "N/A" }
         @{
-            nome      = $_.Name
-            descricao = $_.InterfaceDescription
-            mac       = $_.MacAddress
-            velocidade = "$([math]::Round($_.LinkSpeed -replace '[^0-9]',''/1000,0)) Gbps"
-            ip        = if ($ip) { $ip.IPAddress } else { "N/A" }
-            estado    = $_.Status.ToString()
+            nome       = $_.Name
+            descricao  = $_.InterfaceDescription
+            mac        = $_.MacAddress
+            velocidade = $speedText
+            ip         = if ($ip) { $ip.IPAddress } else { "N/A" }
+            estado     = $_.Status.ToString()
         }
-    }
+    })
 
     # Trafego de rede
     $trafego = @()
     try {
-        $trafego = Get-CimInstance -ClassName Win32_PerfFormattedData_Tcpip_NetworkInterface |
+        $trafego = @(Get-CimInstance -ClassName Win32_PerfFormattedData_Tcpip_NetworkInterface |
             Where-Object { $_.BytesTotalPersec -gt 0 } | ForEach-Object {
                 @{
                     adapter    = $_.Name -replace '\(.*\)','' -replace '_',' '
@@ -48,11 +51,11 @@ if ($Acao -eq "json") {
                     bytesOutKB = [math]::Round($_.BytesSentPersec / 1KB, 2)
                     totalKB    = [math]::Round($_.BytesTotalPersec / 1KB, 2)
                 }
-            }
+            })
     } catch {}
 
     # Portas abertas (listening)
-    $portas = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+    $portas = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
         Sort-Object LocalPort |
         Select-Object -First 30 | ForEach-Object {
             $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue
@@ -62,10 +65,10 @@ if ($Acao -eq "json") {
                 pid       = $_.OwningProcess
                 processo  = if ($proc) { $proc.ProcessName } else { "N/A" }
             }
-        }
+        })
 
     # Conexoes ativas
-    $conexoes = Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue |
+    $conexoes = @(Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue |
         Select-Object -First 20 | ForEach-Object {
             $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue
             @{
@@ -74,22 +77,26 @@ if ($Acao -eq "json") {
                 remotePort = $_.RemotePort
                 processo   = if ($proc) { $proc.ProcessName } else { "N/A" }
             }
-        }
+        })
 
     # DNS config
-    $dnsConfig = Get-DnsClientServerAddress -AddressFamily IPv4 | Where-Object { $_.ServerAddresses } | ForEach-Object {
+    $dnsConfig = @(Get-DnsClientServerAddress -AddressFamily IPv4 | Where-Object { $_.ServerAddresses } | ForEach-Object {
         @{
             interface  = $_.InterfaceAlias
             servidores = $_.ServerAddresses -join ", "
         }
-    }
+    })
 
-    # Teste de conectividade basico
+    # Teste de conectividade - timeout curto (1 segundo) para nao atrasar
     $pingResults = @()
     $alvos = @("192.168.1.1", "8.8.8.8", "1.1.1.1")
     foreach ($a in $alvos) {
-        $test = Test-Connection -ComputerName $a -Count 1 -Quiet -ErrorAction SilentlyContinue
-        $pingResults += @{ alvo = $a; alcancavel = [bool]$test }
+        try {
+            $test = Test-Connection -ComputerName $a -Count 1 -TimeToLive 30 -Quiet -ErrorAction SilentlyContinue
+            $pingResults += @{ alvo = $a; alcancavel = [bool]$test }
+        } catch {
+            $pingResults += @{ alvo = $a; alcancavel = $false }
+        }
     }
 
     $resultado = @{

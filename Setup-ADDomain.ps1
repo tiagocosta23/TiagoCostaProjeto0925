@@ -57,8 +57,8 @@ function Prompt-Password {
 }
 
 Write-Host "-- Configuracao do Dominio --" -ForegroundColor White
-$DomainName    = Prompt-Value -Mensagem "Nome do dominio (FQDN)"          -Sugestao "atec.local"
-$DomainNetbios = Prompt-Value -Mensagem "Nome NetBIOS (aparece no login)" -Sugestao "ATEC"
+$DomainName    = Prompt-Value -Mensagem "Nome do dominio (FQDN)"          -Sugestao "windows.local"
+$DomainNetbios = Prompt-Value -Mensagem "Nome NetBIOS (aparece no login)" -Sugestao "WINDOWS"
 
 Write-Host ""
 Write-Host "-- Password de Recuperacao (DSRM) --" -ForegroundColor White

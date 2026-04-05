@@ -183,8 +183,42 @@ Write-Host "[7/7] A instalar Roles Base (AD, DNS, File Server)..." -ForegroundCo
 $roles = @("AD-Domain-Services", "DNS", "FS-FileServer", "RSAT-AD-PowerShell", "RSAT-DNS-Server")
 if ($instalarPrint) { $roles += "Print-Server" }
 
-Install-WindowsFeature -Name $roles -IncludeManagementTools | Out-Null
-Write-Host "       Roles instaladas: $($roles -join ', ')" -ForegroundColor Green
+try {
+    $resultado = Install-WindowsFeature -Name $roles -IncludeManagementTools -ErrorAction Stop
+    if ($resultado.Success) {
+        Write-Host "       Roles instaladas: $($roles -join ', ')" -ForegroundColor Green
+    } else {
+        Write-Host "       [ERRO] A instalacao das roles falhou!" -ForegroundColor Red
+        Write-Host "       Motivo: $($resultado.ExitCode)" -ForegroundColor Red
+        Write-Host "       Executa o script novamente ou instala manualmente." -ForegroundColor Yellow
+        Read-Host "       Prime ENTER para sair"
+        exit 1
+    }
+} catch {
+    Write-Host "       [ERRO] Falha ao instalar roles: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "       Executa o script novamente ou instala manualmente." -ForegroundColor Yellow
+    Read-Host "       Prime ENTER para sair"
+    exit 1
+}
+
+# Verificar se as roles criticas ficaram mesmo instaladas
+$verificar = @("AD-Domain-Services", "DNS", "FS-FileServer")
+$falharam = @()
+foreach ($role in $verificar) {
+    $f = Get-WindowsFeature -Name $role
+    if (-not $f.Installed) { $falharam += $role }
+}
+
+if ($falharam.Count -gt 0) {
+    Write-Host ""
+    Write-Host "       [ERRO] Roles NAO instaladas: $($falharam -join ', ')" -ForegroundColor Red
+    Write-Host "       Verifica o acesso ao repositorio de features do Windows." -ForegroundColor Yellow
+    Write-Host "       Tenta: Install-WindowsFeature -Name $($falharam -join ',') -IncludeManagementTools" -ForegroundColor Yellow
+    Read-Host "       Prime ENTER para sair (o servidor NAO vai reiniciar)"
+    exit 1
+}
+
+Write-Host "       [OK] Todas as roles verificadas com sucesso." -ForegroundColor Green
 
 # ── Criar estrutura de dados operacionais ──
 $DataRoot = "C:\SysAdmin"

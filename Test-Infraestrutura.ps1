@@ -38,7 +38,7 @@ function Prompt-IP {
 Write-Host "-- IPs da Infraestrutura --" -ForegroundColor White
 $IPGateway = Prompt-IP    -Mensagem "IP do Gateway (pfSense)"  -Sugestao "192.168.1.1"
 $IPCliente = Prompt-IP    -Mensagem "IP do Cliente"            -Sugestao "192.168.1.20"
-$Dominio   = Prompt-Value -Mensagem "Nome do dominio (FQDN)"   -Sugestao "atec.local"
+$Dominio   = Prompt-Value -Mensagem "Nome do dominio (FQDN)"   -Sugestao "windows.local"
 
 Write-Host ""
 

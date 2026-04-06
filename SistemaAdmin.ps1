@@ -21,8 +21,8 @@ function Show-Banner {
     Write-Host "  |   SISTEMA AUTOMATIZADO DE ADMINISTRACAO                   |" -ForegroundColor Cyan
     Write-Host "  |   E MONITORIZACAO DE INFRAESTRUTURA DE TI                 |" -ForegroundColor Cyan
     Write-Host "  |                                                           |" -ForegroundColor Cyan
-    Write-Host "  |   Servidor: $($env:COMPUTERNAME.PadRight(20))                       |" -ForegroundColor Cyan
-    Write-Host "  |   Data:     $($(Get-Date -Format 'yyyy-MM-dd HH:mm').PadRight(20))                       |" -ForegroundColor Cyan
+    Write-Host "  |   Servidor: $($env:COMPUTERNAME.PadRight(20))                          |" -ForegroundColor Cyan
+    Write-Host "  |   Data:     $($(Get-Date -Format 'yyyy-MM-dd HH:mm').PadRight(20))                          |" -ForegroundColor Cyan
     Write-Host "  |                                                           |" -ForegroundColor Cyan
     Write-Host "  +===========================================================+" -ForegroundColor Cyan
     Write-Host ""

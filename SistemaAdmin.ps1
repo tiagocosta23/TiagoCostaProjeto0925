@@ -248,6 +248,8 @@ function Menu-Rede {
             "Conexoes ativas",
             "Configuracao DNS",
             "Teste de ping/conectividade",
+            "Ping manual (IP ou nome)",
+            "Nslookup (resolver nomes/IPs)",
             "Monitorizar trafego"
         )
         $op = Read-Host "  Opcao"
@@ -258,7 +260,9 @@ function Menu-Rede {
             "3" { & $script conexoes; Pause-Menu }
             "4" { & $script dns; Pause-Menu }
             "5" { & $script ping; Pause-Menu }
-            "6" { & $script trafego; Pause-Menu }
+            "6" { & $script ping-manual; Pause-Menu }
+            "7" { & $script nslookup; Pause-Menu }
+            "8" { & $script trafego; Pause-Menu }
         }
     } while ($op -ne "0")
 }

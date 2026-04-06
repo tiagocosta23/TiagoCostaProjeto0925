@@ -5,7 +5,7 @@
 
 param(
     [Parameter(Position=0)]
-    [ValidateSet("interfaces","portas","conexoes","dns","ping","trafego","json")]
+    [ValidateSet("interfaces","portas","conexoes","dns","ping","ping-manual","nslookup","trafego","json")]
     [string]$Acao,
 
     [string]$Alvo = "192.168.1.1"
@@ -212,6 +212,65 @@ function Mostrar-Trafego {
     }
 }
 
+function Ping-Manual {
+    Write-Host ""
+    Write-Host "  PING MANUAL" -ForegroundColor Cyan
+    Write-Host "  ============" -ForegroundColor Cyan
+    $destino = Read-Host "  Endereco IP ou nome"
+    if ([string]::IsNullOrWhiteSpace($destino)) {
+        Write-Host "  [ERRO] Endereco vazio." -ForegroundColor Red
+        return
+    }
+    Write-Host "  A fazer ping a '$destino'..." -ForegroundColor Yellow
+    Write-Host ""
+    $r = Test-Connection -ComputerName $destino -Count 4 -ErrorAction SilentlyContinue
+    if ($r) {
+        $r | Format-Table @{L='Origem';E={$_.PSComputerName}}, Address,
+            @{L='Bytes';E={$_.BufferSize}},
+            @{L='Tempo (ms)';E={$_.ResponseTime}},
+            @{L='TTL';E={$_.TimeToLive}} -AutoSize | Out-Host
+        $avg = [math]::Round(($r | Measure-Object -Property ResponseTime -Average).Average, 1)
+        $min = ($r | Measure-Object -Property ResponseTime -Minimum).Minimum
+        $max = ($r | Measure-Object -Property ResponseTime -Maximum).Maximum
+        Write-Host "  Estatisticas: Min=${min}ms | Max=${max}ms | Media=${avg}ms | Pacotes=4/4" -ForegroundColor Green
+    } else {
+        Write-Host "  [FALHA] '$destino' nao respondeu ao ping." -ForegroundColor Red
+    }
+    Write-Log "Ping manual para '$destino'"
+}
+
+function Fazer-Nslookup {
+    Write-Host ""
+    Write-Host "  NSLOOKUP" -ForegroundColor Cyan
+    Write-Host "  =========" -ForegroundColor Cyan
+    $destino = Read-Host "  Nome ou IP a resolver"
+    if ([string]::IsNullOrWhiteSpace($destino)) {
+        Write-Host "  [ERRO] Endereco vazio." -ForegroundColor Red
+        return
+    }
+    Write-Host "  A resolver '$destino'..." -ForegroundColor Yellow
+    Write-Host ""
+
+    $resultados = Resolve-DnsName $destino -ErrorAction SilentlyContinue
+    if ($resultados) {
+        foreach ($r in $resultados) {
+            switch ($r.Type) {
+                "A"     { Write-Host "  [A]     $($r.Name) -> $($r.IPAddress)" -ForegroundColor Green }
+                "AAAA"  { Write-Host "  [AAAA]  $($r.Name) -> $($r.IPAddress)" -ForegroundColor Green }
+                "CNAME" { Write-Host "  [CNAME] $($r.Name) -> $($r.NameHost)" -ForegroundColor Green }
+                "MX"    { Write-Host "  [MX]    $($r.Name) -> $($r.NameExchange) (Prioridade: $($r.Preference))" -ForegroundColor Green }
+                "NS"    { Write-Host "  [NS]    $($r.Name) -> $($r.NameHost)" -ForegroundColor Green }
+                "SOA"   { Write-Host "  [SOA]   $($r.Name) -> $($r.PrimaryServer)" -ForegroundColor Green }
+                "PTR"   { Write-Host "  [PTR]   $($r.Name) -> $($r.NameHost)" -ForegroundColor Green }
+                default { Write-Host "  [$($r.Type)] $($r.Name) -> $($r.IPAddress)" -ForegroundColor Gray }
+            }
+        }
+    } else {
+        Write-Host "  [FALHA] Nao foi possivel resolver '$destino'." -ForegroundColor Red
+    }
+    Write-Log "Nslookup para '$destino'"
+}
+
 # ── Execucao ──
 switch ($Acao) {
     "interfaces" { Mostrar-Interfaces }
@@ -219,12 +278,14 @@ switch ($Acao) {
     "conexoes"   { Mostrar-Conexoes }
     "dns"        { Testar-DNS }
     "ping"       { Testar-Ping }
+    "ping-manual" { Ping-Manual }
+    "nslookup"   { Fazer-Nslookup }
     "trafego"    { Mostrar-Trafego }
     default {
         Write-Host ""
         Write-Host "  Uso: .\Monitor-Network.ps1 <acao> [-Alvo IP]" -ForegroundColor Yellow
         Write-Host ""
-        Write-Host "  Acoes: interfaces, portas, conexoes, dns, ping, trafego, json"
+        Write-Host "  Acoes: interfaces, portas, conexoes, dns, ping, ping-manual, nslookup, trafego, json"
         Write-Host ""
     }
 }

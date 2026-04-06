@@ -21,8 +21,8 @@ function Show-Banner {
     Write-Host "  |   SISTEMA AUTOMATIZADO DE ADMINISTRACAO                   |" -ForegroundColor Cyan
     Write-Host "  |   E MONITORIZACAO DE INFRAESTRUTURA DE TI                 |" -ForegroundColor Cyan
     Write-Host "  |                                                           |" -ForegroundColor Cyan
-    Write-Host "  |   Servidor: $($env:COMPUTERNAME.PadRight(20))                          |" -ForegroundColor Cyan
-    Write-Host "  |   Data:     $($(Get-Date -Format 'yyyy-MM-dd HH:mm').PadRight(20))                          |" -ForegroundColor Cyan
+    Write-Host "  |   Servidor: $($env:COMPUTERNAME.PadRight(20))                       |" -ForegroundColor Cyan
+    Write-Host "  |   Data:     $($(Get-Date -Format 'yyyy-MM-dd HH:mm').PadRight(20))                       |" -ForegroundColor Cyan
     Write-Host "  |                                                           |" -ForegroundColor Cyan
     Write-Host "  +===========================================================+" -ForegroundColor Cyan
     Write-Host ""
@@ -142,10 +142,10 @@ function Menu-Processos {
                 Pause-Menu
             }
             "4" {
-                $pid = Read-Host "  PID do processo"
+                $processId = Read-Host "  PID do processo"
                 try {
-                    Stop-Process -Id $pid -Force
-                    Write-Host "  [OK] Processo $pid terminado." -ForegroundColor Green
+                    Stop-Process -Id $processId -Force
+                    Write-Host "  [OK] Processo $processId terminado." -ForegroundColor Green
                 } catch { Write-Host "  [ERRO] $($_.Exception.Message)" -ForegroundColor Red }
                 Pause-Menu
             }
